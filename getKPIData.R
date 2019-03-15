@@ -24,10 +24,36 @@ kpiQuery <- function(){
 
 kpiMapping <- function(){
     sql <- "
-    SELECT 
+   SELECT 
         L.ind_id AS kpi,
-        C.ind_id AS child_kpi,
-        P.ind_id AS parent_kpi
+		L.group_field_1,
+		L.group_value_1,
+		L.group_field_2,
+		L.group_value_2,
+		L.group_field_3,
+		L.group_value_3,
+		L.group_field_4,
+		L.group_value_4,
+
+		C.ind_id AS child_kpi,
+		C.group_field_1 AS child_group_field_1,
+		C.group_value_1 AS child_group_value_1,
+		C.group_field_2 AS child_group_field_2,
+		C.group_value_2 AS child_group_value_2,
+		C.group_field_3 AS child_group_field_3,
+		C.group_value_3 AS child_group_value_3,
+		C.group_field_4 AS child_group_field_4,
+		C.group_value_4 AS child_group_value_4,
+
+		P.ind_id AS parent_kpi,
+		P.group_field_1 AS parent_group_field_1,
+		P.group_value_1 AS parent_group_value_1,
+		P.group_field_2 AS parent_group_field_2,
+		P.group_value_2 AS parent_group_value_2,
+		P.group_field_3 AS parent_group_field_3,
+		P.group_value_3 AS parent_group_value_3,
+		P.group_field_4 AS parent_group_field_4,
+		P.group_value_4 AS parent_group_value_4
     FROM 
         [LH_Indicators].[kpi].[ind_type] L
         LEFT JOIN [LH_Indicators].[kpi].[ind_type] P
@@ -111,7 +137,6 @@ kpiMapping <- function(){
     WHERE 
         L.ind_group_cd = 'Beds'
         AND L.period_cd = 'day'
-    
     ;"    
     sql
 }
@@ -133,12 +158,12 @@ kpiMap <- function(cs, sql){
 }
 
 sql <- kpiQuery()
-cs <- connectionString( Server = "aworks300\\islandhealth", Database = "LH_Indicators")
+cs <- connectionString( Server = "aworks300\\wohs", Database = "LH_Indicators")
 df <- kpiTable(cs, sql)
 
 
 sql <- kpiMapping()
-cs <- connectionString( Server = "aworks300\\islandhealth", Database = "LH_Indicators")
+cs <- connectionString( Server = "aworks300\\wohs", Database = "LH_Indicators")
 dfMap <- kpiMap(cs, sql)
 
 
