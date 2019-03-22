@@ -1,10 +1,3 @@
-require(RODBC)
-require(tibble)
-source( "Database\\getConnectionString.R")
-source( "KPI Dashboard\\dataQualityDashboard.R")
-
-library(tibble)
-
 kpiQuery <- function(){
     sql <- "
     SELECT 
@@ -157,30 +150,11 @@ kpiMap <- function(cs, sql){
     kpitable
 }
 
-sql <- kpiQuery()
-cs <- connectionString( Server = "aworks300\\wohs", Database = "LH_Indicators")
-df <- kpiTable(cs, sql)
+#sql <- kpiQuery()
+#cs <- connectionString( Server = "aworks300\\wohs", Database = "LH_Indicators")
+#df <- kpiTable(cs, sql)
 
 
-sql <- kpiMapping()
-cs <- connectionString( Server = "aworks300\\wohs", Database = "LH_Indicators")
-dfMap <- kpiMap(cs, sql)
-
-
-
-
-print( head(df))
-print( head(dfMap))
-#dataFrame <- as_data_frame(df)
-
-#dataFrame <- df %>%
-#    filter( dataFrame$ind_id == 8) %>%
-#    time_decompose(ind_value_1, method = "twitter", trend = "2 months") %>%
-#    anomalize(remainder, method = "gesd") %>%
-#    time_recompose()
-
-# Determine number of anomalies
-#print( sum(dataFrame$anomaly == "Yes"))
-
-
-anomalies(df, dfMap)
+#sql <- kpiMapping()
+#cs <- connectionString( Server = "aworks300\\wohs", Database = "LH_Indicators")
+#dfMap <- kpiMap(cs, sql)
