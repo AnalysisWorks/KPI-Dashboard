@@ -16,14 +16,13 @@ getHeader <- function(){
 getDropDownMessage <- function(){
     dropDownMessages <- dropdownMenu(type = "messages",
         messageItem(
-            from = "Sales Dept",
-            message = "Sales are steady this month."
+            from = "Zachary",
+            message = "This is my QA system."
         ),
         messageItem(
-            from = "New User",
-            message = "How do I register?",
-            icon = icon("question"),
-            time = "13:45"
+            from = "Zachary",
+            message = "Improvement suggestions welcome.",
+            time = "00:00"
         )
     )
     dropDownMessages
@@ -33,13 +32,13 @@ getDropDownNotification <- function(){
 
     dropDownNotifications <- dropdownMenu(type = "notifications",
         notificationItem(
-            text = "5 new users today",
-            icon("users")
+            text = "Currently in Beta.",
+            icon("users"),
+            status = "success"
         ),
         notificationItem(
-            text = "12 items delivered",
-            icon("truck"),
-            status = "success"
+            text = "Please contact on error.",
+            icon("truck")
         )
     )
     dropDownNotifications
@@ -47,11 +46,11 @@ getDropDownNotification <- function(){
 
 getDropDownTasks <- function(){
     dropDownTasks <- dropdownMenu(type = "tasks", badgeStatus = "success",
-        taskItem(value = 90, color = "green",
-            "Documentation"
-        ),
         taskItem(value = 17, color = "aqua",
-            "Project X"
+            "QA Project"
+        ),
+        taskItem(value = 90, color = "green",
+            "QA Progress placeholder"
         )
     )
     dropDownTasks
