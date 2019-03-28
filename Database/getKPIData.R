@@ -231,9 +231,9 @@ kpiPeriodComparisionTrend <- function(kpi, start, end){
 			AND L.dt = DATEADD( yy, 1, R.dt)
     WHERE 
         L.period_cd = 'day'
-        AND R.period_cd = 'day'
+        AND ( R.period_cd = 'day' OR R.period_cd IS NULL)
         AND L.ind_group_cd = 'Beds'
-        AND R.ind_group_cd = 'Beds'
+        AND ( R.ind_group_cd = 'Beds' OR R.ind_group_cd IS NULL)
         AND L.dt BETWEEN '%s' AND '%s'
 		AND L.ind_id = %s
     ORDER BY

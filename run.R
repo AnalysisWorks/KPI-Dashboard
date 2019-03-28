@@ -14,8 +14,8 @@ source( paste( app, "body.R", sep= "\\"))
 source( paste( app, "dashboard.R", sep= "\\"))
 
 # Establish network conditions
-# options(shiny.host = "0.0.0.0")
-# options(shiny.port = 5050)
+options(shiny.host = "0.0.0.0")
+options(shiny.port = 5050)
 
 
 set.seed(123)

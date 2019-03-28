@@ -12,14 +12,15 @@ getSidebar <- function(){
         choices = c(    
                 "William Osler" = "wohs", 
                 "Vancouver Coastal" = "vancouvercoastal",
-                "Vancouver Island Health" = "islandhealth"
+                "Vancouver Island Health" = "islandhealth",
+                "Alberta Health" = "AHSEdmontonZone"
                 )
         ),
         dateRangeInput(
             "date_range", 
             "Date range:",
-            start = "2016-04-01",
-            end   = "2019-03-31"
+            start = "2018-04-01",
+            end   = "2019-03-14"
         ),
         #button to close window and end the session
         tags$button(
@@ -29,7 +30,11 @@ getSidebar <- function(){
             onclick = "setTimeout(function(){window.close();},500);", 
             "Close window"
         ),
-        numericInput("KPI", "Target KPI", "2", min = 1, max = 10000, step = 1, width = NULL)
+
+        numericInput("KPI", "Current KPI", "2", min = 1, max = 10000, step = 1, width = NULL),
+        textOutput("parentKPI"),
+        textOutput("childKPI"),
+        uiOutput("childKPIs")
     )
     sidebar
 }
@@ -50,11 +55,6 @@ getSidebarMenu <- function(){
         menuItem(
             "Period Trend Comparison", 
             tabName = "period_comparison_trend", 
-            icon = icon("th")
-        ),
-        menuItem(
-            "Quality Assurance", 
-            tabName = "quality_assurance", 
             icon = icon("th")
         )
     )

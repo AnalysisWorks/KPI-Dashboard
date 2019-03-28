@@ -4,8 +4,8 @@ require(dplyr)
 
 getBody <- function(){
     body <- dashboardBody(
-        getTabItems(),
-        tableOutput( "Indicators")
+        getTabItems()
+        #tableOutput( "Indicators")
     ) 
     body
 }
@@ -14,7 +14,8 @@ getTabItems <- function(){
     tabItems <- tabItems(
         tabItem( 
             tabName = "anomaly_detection",
-            plotOutput('trend', height = "400px")
+            plotOutput('trend', height = "400px"),
+            plotOutput('trendChild', height = "400px")
         ),
         tabItem( 
             tabName = "period_comparison_table",
@@ -22,11 +23,19 @@ getTabItems <- function(){
         ),
         tabItem( 
             tabName = "period_comparison_trend",
-            plotOutput('seriesTrend', height = "400px")
-        ),
-        tabItem( 
-            tabName = "quality_assurance",
-            getBoxItems("plot1")
+            tabBox(
+                title = "Trend Comparison",
+                id = "trend_comp",
+                width = "100%",
+                tabPanel( 
+                    "Current KPI Comparison",
+                    plotlyOutput('interactiveTrend', height = "400px", width = "100%")
+                ),
+                tabPanel( 
+                    "Selected Child KPI Comparison",
+                    plotlyOutput('interactiveTrendChild', height = "400px", width = "100%")
+                )
+            )
         )
     )
     tabItems
