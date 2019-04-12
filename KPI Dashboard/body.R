@@ -36,6 +36,10 @@ getTabItems <- function(){
                     plotlyOutput('interactiveTrendChild', height = "400px", width = "100%")
                 )
             )
+        ),tabItem( 
+            tabName = "period_comparison_interval_trend",
+            plotlyOutput('interactiveAggregate', height = "400px", width = "100%"),
+            plotlyOutput('interactiveAggregateChild', height = "400px", width = "100%")
         )
     )
     tabItems

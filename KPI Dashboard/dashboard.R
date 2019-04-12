@@ -254,6 +254,93 @@ dashboard <- function(dataset) { #, mapping
                 summary(stats)
 
             })
+
+
+            output$interactiveAggregate <- renderPlotly({
+
+                #mapping <- getMapping()
+                #children <- mapping %>%
+                #        filter( mapping$kpi == input$KPI)
+                #
+                #children <- unique(children$child_kpi)
+
+                #traces <- list()
+                #for( i in 1:length(children)){
+                #    sql <- kpiPeriodComparisionTrend(children[[1]], input$date_range[1], input$date_range[2])
+                #    cs <- connectionString( Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators")
+                #    traces[[i]] <- kpiTable(cs, sql)
+                #}
+                #df_c <- getTrendChild()
+                df <- getTrend()
+
+                p <- df %>%
+                plot_ly(
+                    x = ~Date,
+                    y = ~series_1, 
+                    type = "scatter",
+                    mode = 'lines',
+                    fill = 'tozeroy',
+                    name = "date"
+                ) %>%
+                add_trace( 
+                    y = ~df$series_2, 
+                    name = 'previous year series', 
+                    mode = 'lines',
+                    fill = 'tozeroy' 
+                ) %>%
+                layout(
+                    title = "<b>Aggregate Data</b><br>test phase",
+                    xaxis = list(
+                        type = 'date'
+                    ),
+                    yaxis = list(
+                        title = "Volumes"
+                    )
+                )
+            })
+
+            output$interactiveAggregateChild <- renderPlotly({
+
+                #mapping <- getMapping()
+                #children <- mapping %>%
+                #        filter( mapping$kpi == input$KPI)
+                #
+                #children <- unique(children$child_kpi)
+
+                #traces <- list()
+                #for( i in 1:length(children)){
+                #    sql <- kpiPeriodComparisionTrend(children[[1]], input$date_range[1], input$date_range[2])
+                #    cs <- connectionString( Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators")
+                #    traces[[i]] <- kpiTable(cs, sql)
+                #}
+                #df_c <- getTrendChild()
+                df <- getTrendChild()
+
+                p <- df %>%
+                plot_ly(
+                    x = ~Date,
+                    y = ~series_1, 
+                    type = "scatter",
+                    mode = 'lines',
+                    fill = 'tozeroy',
+                    name = "date"
+                ) %>%
+                add_trace( 
+                    y = ~df$series_2, 
+                    name = 'previous year series', 
+                    mode = 'lines',
+                    fill = 'tozeroy' 
+                ) %>%
+                layout(
+                    title = "<b>Aggregate Data</b><br>test phase",
+                    xaxis = list(
+                        type = 'date'
+                    ),
+                    yaxis = list(
+                        title = "Volumes"
+                    )
+                )
+            })
         }
     )
 }

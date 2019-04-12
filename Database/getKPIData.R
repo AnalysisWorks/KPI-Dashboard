@@ -202,10 +202,10 @@ kpiPeriodComparisionTable <- function(){
         (L.ind_value_1 - R1.ind_value_1) / L.ind_value_1 AS percent_change
     FROM
         ordered L
-       LEFT JOIN ordered R1
-           ON L.ind_id = R1.ind_id
-           AND L.dt = R1.dt
-           AND L.comparative_date = R1.comparative_date
+        LEFT JOIN ordered R1
+            ON L.ind_id = R1.ind_id
+            AND L.dt = R1.dt
+            AND L.comparative_date = R1.comparative_date
    WHERE
        L._eff_start_dt = L.last_assembly
 	   AND R1._eff_start_dt = L.comparative_date

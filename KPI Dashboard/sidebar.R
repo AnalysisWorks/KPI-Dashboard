@@ -56,6 +56,11 @@ getSidebarMenu <- function(){
             "Period Trend Comparison", 
             tabName = "period_comparison_trend", 
             icon = icon("th")
+        ),
+        menuItem(
+            "Period Aggregates", 
+            tabName = "period_comparison_interval_trend", 
+            icon = icon("th")
         )
     )
     siderbarMenuItems
