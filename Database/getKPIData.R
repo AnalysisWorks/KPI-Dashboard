@@ -255,24 +255,43 @@ kpiDayIndicators <- function(){
     ;"
 }
 
-kpiTable <- function(cs, sql){
-    kpiTable <- sqlQuery( cs, sql)
-    odbcClose(cs)
-    kpiTable[,1] <- as.Date( as.character(kpiTable[,1]), form = "%Y-%m-%d")
-    kpitable <- as_data_frame(kpiTable)
-    kpitable
+kpiDetails <- function(kpi){
+    sql <- sprintf("
+    SELECT  
+        DISTINCT 
+      [ind_id],
+      [ind_group_cd],
+      [group_field_1],
+      [group_value_1],
+      [group_field_2],
+      [group_value_2],
+      [group_field_3],
+      [group_value_3],
+      [group_field_4],
+      [group_value_4]
+FROM 
+	[LH_Indicators].[kpi].[ind_data_detail]
+WHERE 
+    ind_id = %s ;", kpi)
+    sql
 }
 
-kpiMap <- function(cs, sql){
-    kpiTable <- sqlQuery( cs, sql)
-    odbcClose(cs)
-    kpitable <- as_data_frame(kpiTable)
-    kpitable
-}
-
-getKPIs <- function(cs, sql){
-    kpiTable <- sqlQuery( cs, sql)
-    odbcClose(cs)
-    kpitable <- as.data.frame(kpiTable)
-    kpitable
+kpiDetailsAll <- function(){
+    sql <- "
+    SELECT  
+        DISTINCT 
+      [ind_id],
+      [ind_group_cd],
+      [group_field_1],
+      [group_value_1],
+      [group_field_2],
+      [group_value_2],
+      [group_field_3],
+      [group_value_3],
+      [group_field_4],
+      [group_value_4]
+FROM 
+	[LH_Indicators].[kpi].[ind_data_detail]
+    ;"
+    sql
 }
