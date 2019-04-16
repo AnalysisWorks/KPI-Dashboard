@@ -12,7 +12,7 @@ source("DataManipulation\\data_type_checks.R")
 #$file_delimiter = "\t"
 
 
-tientFlow <- function(cs, sql) {
+patientFlow <- function(cs, sql) {
   kpiTable <- sqlQuery(cs, sql)
   odbcClose(cs)
   kpiTable <- as_data_frame(kpiTable)
