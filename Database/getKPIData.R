@@ -134,85 +134,70 @@ kpiMapping <- function(){
     ;"    
     sql
 }
-kpiPeriodComparisionTable <- function(){
-    sql <- "        
+kpiPeriodComparision <- function(kpi, start, end){
+    sql <- sprintf("        
     WITH last_date AS (
         SELECT 
-			1 record_order, 
-			L.ind_id,
-			MAX(L._eff_start_dt) AS last_assembly
+            1 record_order, 
+            MAX(L._eff_start_dt) AS last_assembly
         FROM 
             LH_Indicators.kpi.ind_data_base L
             LEFT JOIN kpi.ind_type T
                 ON L.ind_id = T.ind_id
                 AND L.ind_group_cd = T.ind_group_cd
         WHERE
-            T.period_cd = 'fiscal'
+            T.period_cd = 'day'
             AND T.ind_group_cd = 'Beds'
-		GROUP BY	
-			L.ind_id
     )
-	, comparative_date AS (
+    , comparative_date AS (
         SELECT 
-			2 as record_order,
-			L.ind_id,
-			MAX(L._eff_start_dt) AS comparative_date
+            2 as record_order,
+            MAX(L._eff_start_dt) AS comparative_date
         FROM 
             LH_Indicators.kpi.ind_data_base L
             LEFT JOIN kpi.ind_type T
                 ON L.ind_id = T.ind_id
                 AND L.ind_group_cd = T.ind_group_cd
-			INNER JOIN last_date D
-				ON L.ind_id = D.ind_id
+            ,last_date D
         WHERE
-            T.period_cd = 'fiscal'
+            T.period_cd = 'day'
+            AND L.ind_id = %s
             AND T.ind_group_cd = 'Beds'
-			AND L._eff_start_dt <> D.last_assembly
-		GROUP BY	
-			L.ind_id
+            AND L._eff_start_dt <> D.last_assembly
     )
-    ,ordered AS (
+    ,filtered_kpis AS (
         SELECT 
             L.dt, 
             L.ind_value_1, 
             L.ind_id,
-			L._eff_start_dt,
-			R.last_assembly,
-			D.comparative_date
+            L._eff_start_dt,
+            IIF( L._eff_start_dt = R.last_assembly, 1, IIF( L._eff_start_dt = D.comparative_date, 2, 0)) AS [rank]
         FROM 
             LH_Indicators.kpi.ind_data_base L
-            INNER JOIN kpi.ind_type T
-                ON L.ind_id = T.ind_id
-                AND L.ind_group_cd = T.ind_group_cd
-            LEFT JOIN last_date R
-                ON L.ind_id = R.ind_id
-			LEFT JOIN comparative_date D
-				ON L.ind_id = D.ind_id
-
+            ,last_date R   
+            ,comparative_date D
         WHERE 
-            T.period_cd = 'fiscal'
-            AND L.ind_group_cd = 'Beds'
-            AND T.ind_group_cd = 'Beds'
+            L.ind_id = %s
+            AND L.dt BETWEEN '%s' AND '%s'
+            AND (L._eff_start_dt = R.last_assembly
+            OR L._eff_start_dt = D.comparative_date)
     )
     SELECT
-        L.ind_id,
-        L.dt,
-        L.ind_value_1 AS current_period,
-        R1.ind_value_1 AS previous_period_1,
-        (L.ind_value_1 - R1.ind_value_1) / L.ind_value_1 AS percent_change
+        D.dt AS [Date],
+        %s AS ind_id,
+        SUM(IIF( [rank] = 1, L.ind_value_1, 0)) AS series_1,
+        SUM(IIF( [rank] = 2, L.ind_value_1, 0)) AS series_2
     FROM
-        ordered L
-        LEFT JOIN ordered R1
-            ON L.ind_id = R1.ind_id
-            AND L.dt = R1.dt
-            AND L.comparative_date = R1.comparative_date
-   WHERE
-       L._eff_start_dt = L.last_assembly
-	   AND R1._eff_start_dt = L.comparative_date
-   ORDER BY 
-       L.ind_id, 
-       L.dt 
-    ;"
+        LH_Common.dbo.ref_dt D
+        LEFT JOIN filtered_kpis L
+            ON D.dt = L.dt
+    WHERE 
+        D.dt BETWEEN '%s' AND '%s'
+    GROUP BY 
+        D.dt
+    ORDER BY 
+        D.dt  
+    ;", kpi, kpi, start, end, kpi, start, end)
 }
 
 

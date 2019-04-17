@@ -39,7 +39,6 @@ test_App <- function(site, program, nu) {
           })
 
           output$network <- renderVisNetwork({
-
             if (input$level == "nu_cd") {
               nodes <- data.frame(id = c(unique(nu$nu_id)),
                                             label = c(unique(nu$nu_id))

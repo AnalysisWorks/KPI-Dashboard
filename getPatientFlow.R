@@ -33,6 +33,6 @@ nu_df <- as.data.frame(read_tsv('C:\\Users\\zwarnes\\Documents\\ZW_AW\\LightHous
 nu_df <- determineDataTypes(nu_df)$data
 
 options(shiny.host = "0.0.0.0")
-options(shiny.port = 5150)
+options(shiny.port = 5050)
 
 test_App(site_df, program_df, nu_df)

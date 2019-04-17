@@ -499,24 +499,23 @@ dashboard <- function(dataset) {
           })
 
 
+        getTrendComp <- reactive({
+            sql <- kpiPeriodComparision(input$KPI, input$date_range[1], input$date_range[2])
+            cs <- connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators")
+            kpiTable <- kpiTable(cs, sql)
+            kpiTable
+          })
+
+          getTrendChildComp <- reactive({
+            sql <- kpiPeriodComparision(input$childKPI, input$date_range[1], input$date_range[2])
+            cs <- connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators")
+            kpiTable <- kpiTable(cs, sql)
+            kpiTable
+          })
 
           # Year over year comparison with different plotly style
           output$interactiveAggregate <- renderPlotly({
-
-            #mapping <- getMapping()
-            #children <- mapping %>%
-            #        filter( mapping$kpi == input$KPI)
-            #
-            #children <- unique(children$child_kpi)
-
-            #traces <- list()
-            #for( i in 1:length(children)){
-            #    sql <- kpiPeriodComparisionTrend(children[[1]], input$date_range[1], input$date_range[2])
-            #    cs <- connectionString( Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators")
-            #    traces[[i]] <- kpiTable(cs, sql)
-            #}
-            #df_c <- getTrendChild()
-            df <- getTrend()
+            df <- getTrendComp()
 
             p <- df %>%
                 plot_ly(
@@ -525,11 +524,11 @@ dashboard <- function(dataset) {
                     type = "scatter",
                     mode = 'lines',
                     fill = 'tozeroy',
-                    name = "date"
+                    name = "Current KPIs"
                 ) %>%
                 add_trace(
                     y = ~df$series_2,
-                    name = 'previous year series',
+                    name = 'Previous KPIs',
                     mode = 'lines',
                     fill = 'tozeroy'
                 ) %>%
@@ -545,21 +544,7 @@ dashboard <- function(dataset) {
           })
 
           output$interactiveAggregateChild <- renderPlotly({
-
-            #mapping <- getMapping()
-            #children <- mapping %>%
-            #        filter( mapping$kpi == input$KPI)
-            #
-            #children <- unique(children$child_kpi)
-
-            #traces <- list()
-            #for( i in 1:length(children)){
-            #    sql <- kpiPeriodComparisionTrend(children[[1]], input$date_range[1], input$date_range[2])
-            #    cs <- connectionString( Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators")
-            #    traces[[i]] <- kpiTable(cs, sql)
-            #}
-            #df_c <- getTrendChild()
-            df <- getTrendChild()
+            df <- getTrendChildComp()
 
             p <- df %>%
                 plot_ly(
@@ -568,11 +553,11 @@ dashboard <- function(dataset) {
                     type = "scatter",
                     mode = 'lines',
                     fill = 'tozeroy',
-                    name = "date"
+                    name = "Current KPIs"
                 ) %>%
                 add_trace(
                     y = ~df$series_2,
-                    name = 'previous year series',
+                    name = 'Previous KPIs',
                     mode = 'lines',
                     fill = 'tozeroy'
                 ) %>%
@@ -586,9 +571,6 @@ dashboard <- function(dataset) {
                     )
                 )
           })
-
-
-
         }
     )
 }
