@@ -33,19 +33,18 @@ dashboard <- function(debug = FALSE) {
         observe({
             query <- parseQueryString(session$clientData$url_search)
             if (!is.null(query[['server']])) {
-                updateTextInput(session, "server", value = query[['server']])
+                updateSelectizeInput(session, "server", selected = query[['server']])
             }
             if (!is.null(query[['kpi']])) {
-                updateTextInput(session, "KPI", value = query[['kpi']])
+                updateSelectizeInput(session, "KPI", selected = query[['kpi']])
             }
             if (!is.null(query[['kpiType']])) {
-                updateTextInput(session, "indGroup", value = query[['kpiType']])
+                updateSelectizeInput(session, "indGroup", selected = query[['kpiType']])
             }
             if (!is.null(query[['kpiValue']])) {
-                updateTextInput(session, "indValue", value = query[['kpiValue']])
+                updateSelectizeInput(session, "indValue", selected = query[['kpiValue']])
             }
         })
-
         #observe({
         #    if(!all(is.na(input$problemKPIs_cells_selected))){
         #        print(dataTableProxy("problemKPIs"))
@@ -72,10 +71,23 @@ dashboard <- function(debug = FALSE) {
               if(is.null(input$server)){
                   if(debug){
                   log_event(paste( "KPIGroups Server", input$server, sep = ": "))
-              }   
+                }   
                   return(NULL)
               }
+              query <- parseQueryString(session$clientData$url_search)
               if(input$server == 'islandhealth'){
+                  if (!is.null(query[['kpiType']])) {
+                      return( selectizeInput(
+                                "indGroup", label = "KPI",
+                                choices = c(
+                                        "Bed Utilization" = "Beds",
+                                        "ALC Utilization" = "ALC Beds",
+                                        "ADT Events" = "transfers"),
+                                selected = query[['kpiType']],
+                                options = list(
+                                    placeholder = 'Select a KPI type'
+                            )))
+                    }
                   return( selectizeInput(
                             "indGroup", label = "KPI",
                             choices = c(
@@ -83,16 +95,23 @@ dashboard <- function(debug = FALSE) {
                                     "ALC Utilization" = "ALC Beds",
                                     "ADT Events" = "transfers"),
                             options = list(
-                                placeholder = 'Select a KPI type',
-                                onInitialize = I('function() {this.setValue("Beds");}')
+                                placeholder = 'Select a KPI type'
                             )))
               }else{
+                  if (!is.null(query[['kpiType']])) {
+                      return( selectizeInput(
+                                "indGroup", label = "KPI",
+                                choices = c("Bed Utilization" = "Beds"),
+                                selected = query[['kpiType']],
+                                options = list(
+                                    placeholder = 'Select a KPI type'
+                            )))
+                    }
                   return( selectizeInput( 
                             "indGroup", label = "KPI", 
                             choices = c("Bed Utilization" = "Beds"),
                             options = list(
-                                placeholder = 'Select a KPI type',
-                                onInitialize = I('function() {this.setValue("Beds");}')
+                                placeholder = 'Select a KPI type'
                             )))
               }
           })
@@ -101,16 +120,32 @@ dashboard <- function(debug = FALSE) {
               if(debug){
                   log_event("Start KPIValues")
               }
-              if(is.null(input$server)){
+              if(is.null(input$server) || is.null(input$indGroup)){
                   if(debug){
-                  log_event(paste( "KPIGroups Server", input$server, sep = ": "))
+                  log_event(paste( "KPIGroups Server", input$server, "KPI Group", input$indGroup, sep = ": "))
               }  
                   return(NULL)
               }
+
+              query <- parseQueryString(session$clientData$url_search)
               if(input$server == 'islandhealth'){
                 if(input$indGroup == 'transfers' || !is.null(input$indGroup)){
                     if(debug){
                         log_event("Return Islanhealth KPIValues")
+                    }
+                    if(!is.null(query[['kpiType']])){
+                        return( selectizeInput( 
+                                "indValue", label = "Select Value",
+                                choices = c(
+                                    "Primary Value" = "1",
+                                    "Admits" = "2",
+                                    "Discharges" = "3",
+                                    "Transfers" = "4",
+                                    "Other" = "5"),
+                                selected = query[['kpiValue']],
+                                options = list(
+                                    placeholder = 'Select a KPI Value'
+                            )))
                     }
                     return( selectizeInput( 
                                 "indValue", label = "Select Value",
@@ -121,20 +156,28 @@ dashboard <- function(debug = FALSE) {
                                     "Transfers" = "4",
                                     "Other" = "5"),
                                 options = list(
-                                    placeholder = 'Select a KPI Value',
-                                    onInitialize = I('function() {this.setValue("1");}')
+                                    placeholder = 'Select a KPI Value'
                             )))
                 }
                 else{
                     if(debug){
                         log_event("Return Other Islandhealth KPIValues")
                     }
+                    if(!is.null(query[['kpiType']])){
+                        return( selectizeInput( 
+                                "indValue", label = "Select Value",
+                                choices = c(
+                                    "Primary Value" = "1"),
+                                selected = query[['kpiValue']],
+                                options = list(
+                                    placeholder = 'Select a KPI Value'
+                            )))
+                    }
                     return(selectizeInput(
                             "indValue", label = "Select Value", 
                             choices = c("Primary Value" = "1"),
                             options = list(
-                                    placeholder = 'Select a KPI Value',
-                                    onInitialize = I('function() {this.setValue("1");}')
+                                    placeholder = 'Select a KPI Value'
                             )))
                 }
               }
@@ -142,11 +185,19 @@ dashboard <- function(debug = FALSE) {
                   if(debug){
                         log_event("Return All Other KPIValues")
                     }
+                  if(!is.null(query[['kpiType']])){
+                        return( selectizeInput( 
+                                "indValue", label = "Select Value",
+                                choices = c("Primary Value" = "1"),
+                                selected = query[['kpiValue']],
+                                options = list(
+                                    placeholder = 'Select a KPI Value'
+                            )))
+                    }
                   return(selectizeInput("indValue",label = "Select Value",
                             choices = c("Primary Value" = "1"),
                             options = list(
-                                    placeholder = 'Select a KPI Value',
-                                    onInitialize = I('function() {this.setValue("1");}')
+                                    placeholder = 'Select a KPI Value'
                             )))
               }
           })
@@ -154,11 +205,11 @@ dashboard <- function(debug = FALSE) {
             output$KPI <- renderUI({
                 if(debug){
                   log_event("Start KPI")
-              }
-              if(is.null(input$server) || is.null(input$indGroup)){
-                   if(debug){
-                  log_event(paste("KPI server:", input$server, "KPI Group:", input$indGroup, sep = " "))
-              }     
+                }
+                if(is.null(input$server) || is.null(input$indGroup)){
+                    if(debug){
+                    log_event(paste("KPI server:", input$server, "KPI Group:", input$indGroup, sep = " "))
+                }     
                   return(NULL)
                 }
                 sql <- kpiDetailsAll(input$indGroup)
@@ -166,6 +217,16 @@ dashboard <- function(debug = FALSE) {
                 kpis <- getKPIs(cs, sql)
                 if(debug){
                     log_event( "Return KPIs")
+                }
+                query <- parseQueryString(session$clientData$url_search)
+                if (!is.null(query[['kpi']])) {
+                     return(
+                        selectizeInput(
+                            "KPI", "Current KPI", 
+                            choices = unique(kpis$ind_id),
+                            selected = query[['kpi']]
+                        )
+                    )
                 }
                 return(
                     selectizeInput(

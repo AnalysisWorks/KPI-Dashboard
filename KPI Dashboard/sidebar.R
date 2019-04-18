@@ -15,8 +15,7 @@ getSidebar <- function() {
                     "Alberta Health" = "AHSEdmontonZone"
                     ),
             options = list(
-                placeholder = 'Please Select a Server',
-                onInitialize = I('function() { this.setValue("wohs"); }')
+                placeholder = 'Please Select a Server'
             )
         ),
         dateRangeInput(
