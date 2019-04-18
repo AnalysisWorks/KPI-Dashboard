@@ -1,4 +1,5 @@
 library(shiny)
+library(shinyEventLogger)
 library(shinydashboard)
 library(dplyr)
 library(anomalyDetection)
@@ -6,8 +7,11 @@ library(anomalize)
 library(tidyverse)
 library(plotly)
 
-dashboard <- function(dataset) {
+dashboard <- function(debug = FALSE) {
   #, mapping
+  if(debug){
+      set_logging()
+  }
   shinyApp(
         myUI <- dashboardPage(
             skin = "purple",
@@ -16,15 +20,14 @@ dashboard <- function(dataset) {
             getBody()
         ),
         myServer <- function(input, output, session) {
-
+          if(debug){
+             set_logging_session()
+        }
+   
+          
           # Close dashboard app entirely
           observe({
-            if (input$close > 0) stopApp()
-          })
-
-          # Retrieve any data passed into initialize app function
-          getData <- reactive({
-            x <- dataset
+            if (input$close > 0 && !is.na(input$close)) stopApp()
           })
 
         observe({
@@ -63,51 +66,133 @@ dashboard <- function(dataset) {
         #    }
         #})
           output$KPIGroups <- renderUI({
+              if(debug){
+                  log_event("Start KPIGroups")
+              }
+              if(is.na(input$server) || is.null(input$server)){
+                  if(debug){
+                  log_event(paste( "KPIGroups Server", input$server, sep = ": "))
+              }   
+                  return(NULL)
+              }
               if(input$server == 'islandhealth'){
-                  return( radioButtons(  "indGroup", label = "KPI",
+                  return( selectizeInput(
+                            "indGroup", label = "KPI",
                             choices = c(
                                     "Bed Utilization" = "Beds",
                                     "ALC Utilization" = "ALC Beds",
-                                    "ADT Events" = "transfers")))
+                                    "ADT Events" = "transfers"),
+                            options = list(
+                                placeholder = 'Select a KPI type',
+                                onInitialize = I('function() {this.setValue("Beds");}')
+                            )))
               }else{
-                  return( radioButtons( "indGroup", label = "KPI", 
-                            choices = c("Bed Utilization" = "Beds")))
+                  return( selectizeInput( 
+                            "indGroup", label = "KPI", 
+                            choices = c("Bed Utilization" = "Beds"),
+                            options = list(
+                                placeholder = 'Select a KPI type',
+                                onInitialize = I('function() {this.setValue("Beds");}')
+                            )))
               }
           })
 
           output$KPIValues <- renderUI({
+              if(debug){
+                  log_event("Start KPIValues")
+              }
+              if(is.na(input$server) || is.null(input$server)){
+                  if(debug){
+                  log_event(paste( "KPIGroups Server", input$server, sep = ": "))
+              }  
+                  return(NULL)
+              }
               if(input$server == 'islandhealth'){
-                if(input$indGroup == 'transfers'){
-                    return( radioButtons( "indValue", label = "Select Value",
-                            choices = c(
+                if(input$indGroup == 'transfers' || !is.null(input$indGroup)){
+                    if(debug){
+                        log_event("Return Islanhealth KPIValues")
+                    }
+                    return( selectizeInput( 
+                                "indValue", label = "Select Value",
+                                choices = c(
                                     "Primary Value" = "1",
                                     "Admits" = "2",
                                     "Discharges" = "3",
                                     "Transfers" = "4",
-                                    "Other" = "5")))
+                                    "Other" = "5"),
+                                options = list(
+                                    placeholder = 'Select a KPI Value',
+                                    onInitialize = I('function() {this.setValue("1");}')
+                            )))
                 }
                 else{
-                    return(radioButtons("indValue", label = "Select Value", 
-                            choices = c(
-                                "Primary Value" = "1")))
+                    if(debug){
+                        log_event("Return Other Islandhealth KPIValues")
+                    }
+                    return(selectizeInput(
+                            "indValue", label = "Select Value", 
+                            choices = c("Primary Value" = "1"),
+                            options = list(
+                                    placeholder = 'Select a KPI Value',
+                                    onInitialize = I('function() {this.setValue("1");}')
+                            )))
                 }
               }
               else{
-                  return(radioButtons("indValue",label = "Select Value",
-                            choices = c(
-                                    "Primary Value" = "1")))
+                  if(debug){
+                        log_event("Return All Other KPIValues")
+                    }
+                  return(selectizeInput("indValue",label = "Select Value",
+                            choices = c("Primary Value" = "1"),
+                            options = list(
+                                    placeholder = 'Select a KPI Value',
+                                    onInitialize = I('function() {this.setValue("1");}')
+                            )))
               }
           })
 
+            output$KPI <- renderUI({
+                if(debug){
+                  log_event("Start KPI")
+              }
+                if( is.na(input$server) || is.null(input$server)){
+                   if(debug){
+                  log_event(paste("KPI server: ", input$server, sep = ""))
+              }     
+                  return(NULL)
+                }
+                sql <- kpiDetailsAll(input$indGroup)
+                cs <- connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators")
+                kpis <- getKPIs(cs, sql)
+                if(debug){
+                    log_event( "Return KPIs")
+                }
+                return(
+                    selectizeInput(
+                        "KPI", "Current KPI", 
+                        choices = unique(kpis$ind_id)
+                    )
+                )
+            })
           # Get KPI hierarchy mapping
           getMapping <- reactive({
-            as.data.frame(getKPIs(
+              if(debug){
+                  log_event("Start getMapping")
+              }
+            df <- as.data.frame(getKPIs(
                     connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators"),
                     kpiMapping(input$indGroup)
                 ))
+            if(debug){
+                  log_event("Finished getMapping")
+             }
+             df
           })
 
           getLabels <- reactive({
+              if(debug){
+                  log_event("Start getLabels")
+              }
             sql <- kpiDetails(input$KPI ,input$indGroup)
             cs <- connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators")
             labels <- getKPIs(cs, sql)
@@ -178,10 +263,16 @@ dashboard <- function(dataset) {
                             sep = ": "),
                     sep = ", ")
             }
+            if(debug){
+                  log_event("Finish getLabels")
+              }
             title
           })
 
           getChildLabels <- reactive({
+              if(debug){
+                  log_event("Start getChildLabels")
+              }
             if (input$childKPI == "NA" || is.na(input$childKPI)) {
               return(NULL)
             }
@@ -255,92 +346,106 @@ dashboard <- function(dataset) {
                             sep = ": "),
                     sep = ", ")
             }
+            if(debug){
+                  log_event("Finish getChildLabels")
+              }
             title
           })
 
 
           # Display available child KPIs based off current selection
           output$childKPIs <- renderUI({
+              if(debug){
+                  log_event("Start childKPIs")
+              }
             mapping <- getMapping()
             children <- mapping %>%
                         filter(mapping$kpi == input$KPI)
-            if (is.na(children$child_group_value_2)) {
-              return(radioButtons("childKPI",
+            if (all(is.na(children$child_group_value_2))) {
+              if(debug){
+                  log_event("Return childKPIs 1")
+              }
+              return(selectizeInput("childKPI",
                                         "Child KPIs:",
-                                        choices = setNames(as.list(children$child_kpi), children$child_group_value_1)
+                                        choices = setNames(as.list( children$child_kpi), paste( children$child_group_field_1, children$child_group_value_1, sep = ": "))
                                     )
                         )
             }
-            if (is.na(children$child_group_value_3)) {
-              return(radioButtons("childKPI",
+            if (all(is.na(children$child_group_value_3))) {
+                if(debug){
+                  log_event("Return childKPIs 2")
+              }
+              return(selectizeInput("childKPI",
                                         "Child KPIs:",
-                                        choices = setNames(as.list(children$child_kpi), children$child_group_value_2)
+                                        choices = setNames(as.list(children$child_kpi), paste(children$child_group_field_2, children$child_group_value_2, sep = ": "))
                                     )
                         )
             }
-            if (is.na(children$child_group_value_4)) {
-              return(radioButtons("childKPI",
+            if (all(is.na(children$child_group_value_4))) {
+                if(debug){
+                  log_event("Return childKPIs 3")
+              }
+              return(selectizeInput("childKPI",
                                         "Child KPIs:",
-                                        choices = setNames(as.list(children$child_kpi), children$child_group_value_3)
+                                        choices = setNames(as.list(children$child_kpi), paste( children$child_group_field_3, children$child_group_value_3, sep = ": "))
                                     )
                         )
             }
-            return(radioButtons("childKPI",
+            if(debug){
+                  log_event("Return childKPIs 4")
+              }
+            return(selectizeInput("childKPI",
                                         "Child KPIs:",
-                                        choices = setNames(as.list(children$child_kpi), children$child_group_value_4)
+                                        choices = setNames(as.list(children$child_kpi), paste( children$child_group_field_4, children$child_group_value_4, sep = ": "))
                                     )
                         )
           })
-
-          # Attempt to group KPIs based on group field
-          output$childKPIGroups <- renderUI({
-            mapping <- getMapping()
-            currentKPI <- mapping %>%
-                        filter(mapping$kpi == input$childKPI)
-            if (is.na(currentKPI$child_group_field_1)) {
-              return(
-                        selectInput("childKPIGroup", "Grouping", list("Site Code" = c(unique(currentKPI$child_group_value_1))))
-                    )
-            }
-            if (is.na(currentKPI$child_group_field_2)) {
-              return(
-                        selectInput("childKPIGroup", "Grouping",
-                        list(
-                            "Program Code" = c(unique(currentKPI$child_group_value_2)),
-                            "Nursing Program Code" = c(unique(currentKPI$child_group_value_2)),
-                         ))
-                    )
-            }
-            if (is.na(currentKPI$child_group_field_3)) {
-              return(
-                        selectInput("childKPIGroup", "Grouping", unique(currentKPI$child_group_field_3))
-                    )
-            }
-            return(
-                    selectInput("childKPIGroup", "Grouping", unique(currentKPI$child_group_field_4))
-                )
-          })
-
 
           getChildKPI <- reactive({
+              if(debug){
+                  log_event("Start getChildKPI")
+              }
+              if(is.na(input$server) || is.null(input$server)){
+                  return(NULL)
+              }
             mapping <- getMapping()
             currentKPI <- mapping %>%
                         filter(mapping$kpi == input$childKPI)
             childKPI <- paste("Child KPI: ", unique(currentKPI$kpi), sep = "")
+            if(debug){
+                  log_event("Finish getChildKPI")
+              }
+              childKPI
           })
 
           getParentKPI <- reactive({
+              if(debug){
+                  log_event("Start getParentKPI")
+              }
+              if(is.na(input$server) || is.null(input$server)){
+                  return(NULL)
+              }
             mapping <- getMapping()
             currentKPI <- mapping %>%
                         filter(mapping$kpi == input$KPI)
             parentKPI <- paste("Parent KPI: ", unique(currentKPI$parent_kpi), sep = "")
+            if(debug){
+                  log_event("Finish getParentKPI")
+              }
+            parentKPI
           })
 
           output$childKPI <- renderText({
+              if(is.na(input$server) || is.null(input$server)){
+                  return(NULL)
+              }
             getChildKPI()
           })
 
           output$parentKPI <- renderText({
+              if(is.na(input$server) || is.null(input$server)){
+                  return(NULL)
+              }
             getParentKPI()
           })
 
@@ -425,7 +530,6 @@ dashboard <- function(dataset) {
           })
 
           getTrendChildAnomaly <- reactive({
-            
               sql <- kpiQuery(input$childKPI, input$date_range[1], input$date_range[2], input$indGroup, input$indValue)
               cs <- connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators")
               kpiTable <- kpiTable(cs, sql)
@@ -571,7 +675,6 @@ dashboard <- function(dataset) {
           })
 
           output$interactiveTrendChild <- renderPlotly({
-
               label <- getChildLabels()
               df <- getTrendChild()
               p <- plot_ly(
@@ -656,6 +759,7 @@ dashboard <- function(dataset) {
           })
 
           output$interactiveAggregateChild <- renderPlotly({
+
             df <- getTrendChildComp()
 
             p <- df %>%

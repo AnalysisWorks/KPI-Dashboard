@@ -5,38 +5,41 @@ require(dplyr)
 getSidebar <- function() {
   sidebar <- dashboardSidebar(
         getSidebarMenu(),
-
-        radioButtons(
+        selectizeInput(
             "server",
-            label = "Client",
+            label = "Target Server",
             choices = c(
                     "Vancouver Island Health" = "islandhealth",
                     "William Osler" = "wohs",
                     "Vancouver Coastal" = "vancouvercoastal",
                     "Alberta Health" = "AHSEdmontonZone"
-                    )
+                    ),
+            options = list(
+                placeholder = 'Please Select a Server',
+                onInitialize = I('function() { this.setValue("wohs"); }')
+            )
         ),
-        uiOutput("KPIGroups"),
-        uiOutput("KPIValues"),
         dateRangeInput(
             "date_range",
             "Date range:",
             start = "2018-04-01",
             end = "2019-03-14"
         ),
-  #button to close window and end the session
+        uiOutput("KPIGroups"),
+        uiOutput("KPIValues"),
+        uiOutput("KPI"),
+        uiOutput("childKPIs"),
+        actionButton("anomalies", "Calculate Anomalies"),
+        textOutput("parentKPI"),
+        textOutput("childKPI"),
+        #button to close window and end the session
         tags$button(
             id = 'close',
             type = "button",
             class = "btn action-button",
             onclick = "setTimeout(function(){window.close();},500);",
             "Close window"
-        ),
-        actionButton("anomalies", "Calculate Anomalies"),
-        numericInput("KPI", "Current KPI", "2", min = 1, max = 10000, step = 1, width = NULL),
-        textOutput("parentKPI"),
-        textOutput("childKPI"),
-        uiOutput("childKPIs")
+        )
     )
   sidebar
 }
@@ -45,20 +48,23 @@ getSidebar <- function() {
 getSidebarMenu <- function() {
   siderbarMenuItems <- sidebarMenu(
         menuItem(
-            "Anomaly Detection",
-            tabName = "anomaly_detection",
-            icon = icon("dashboard")
-        ),
-        menuItem(
-            "Period Trend Comparison",
-            tabName = "period_comparison_trend",
-            icon = icon("th")
-        ),
-        menuItem(
-            "Period Aggregates",
-            tabName = "period_comparison_interval_trend",
-            icon = icon("th")
-        )
+            "View", icon = icon("dashboard"),
+            menuSubItem(
+                "Anomaly Detection",
+                tabName = "anomaly_detection",
+                icon = icon("dashboard")
+            ),
+            menuSubItem(
+                "Period Trend Comparison",
+                tabName = "period_comparison_trend",
+                icon = icon("th")
+            ),
+            menuSubItem(
+                "Period Aggregates",
+                tabName = "period_comparison_interval_trend",
+                icon = icon("th")
+            )
+        )        
     )
   siderbarMenuItems
 }

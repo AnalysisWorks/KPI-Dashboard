@@ -18,9 +18,6 @@ source(paste(app, "dashboard.R", sep = "\\"))
 options(shiny.host = "0.0.0.0")
 options(shiny.port = 5050)
 
-
-set.seed(123)
-df <- as.data.frame(rnorm(500))
-dashboard(df)
+dashboard(TRUE)
 
 

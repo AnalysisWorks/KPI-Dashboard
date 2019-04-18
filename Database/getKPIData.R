@@ -279,7 +279,8 @@ FROM
 	[LH_Indicators].[kpi].[ind_data_detail]
 WHERE 
     ind_id = %s
-    AND ind_group_cd = '%s' ;", kpi, group)
+    AND ind_group_cd = '%s'
+    AND period_cd = 'day' ;", kpi, group)
     sql
 }
 
@@ -304,6 +305,7 @@ kpiDetailsAll <- function(group){
         [LH_Indicators].[kpi].[ind_data_detail]
     WHERE 
         ind_group_cd = '%s'
+        AND period_cd = 'day'
     ;", group)
     sql
 }
