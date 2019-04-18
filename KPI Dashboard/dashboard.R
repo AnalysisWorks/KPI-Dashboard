@@ -69,7 +69,7 @@ dashboard <- function(debug = FALSE) {
               if(debug){
                   log_event("Start KPIGroups")
               }
-              if(is.na(input$server) || is.null(input$server)){
+              if(is.null(input$server)){
                   if(debug){
                   log_event(paste( "KPIGroups Server", input$server, sep = ": "))
               }   
@@ -101,7 +101,7 @@ dashboard <- function(debug = FALSE) {
               if(debug){
                   log_event("Start KPIValues")
               }
-              if(is.na(input$server) || is.null(input$server)){
+              if(is.null(input$server)){
                   if(debug){
                   log_event(paste( "KPIGroups Server", input$server, sep = ": "))
               }  
@@ -155,9 +155,9 @@ dashboard <- function(debug = FALSE) {
                 if(debug){
                   log_event("Start KPI")
               }
-                if( is.na(input$server) || is.null(input$server)){
+              if(is.null(input$server) || is.null(input$indGroup)){
                    if(debug){
-                  log_event(paste("KPI server: ", input$server, sep = ""))
+                  log_event(paste("KPI server:", input$server, "KPI Group:", input$indGroup, sep = " "))
               }     
                   return(NULL)
                 }
@@ -179,6 +179,12 @@ dashboard <- function(debug = FALSE) {
               if(debug){
                   log_event("Start getMapping")
               }
+              if(is.null(input$server) || is.null(input$indGroup)){
+                   if(debug){
+                  log_event(paste("KPI server:", input$server, "KPI Group:", input$indGroup, sep = " "))
+                   }
+                   return(NULL)
+              }     
             df <- as.data.frame(getKPIs(
                     connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators"),
                     kpiMapping(input$indGroup)
@@ -193,6 +199,12 @@ dashboard <- function(debug = FALSE) {
               if(debug){
                   log_event("Start getLabels")
               }
+            if (is.null(input$KPI) ) {
+                if(debug){
+                  log_event(paste("getLabels KPI", input$KPI, sep = ": "))
+              }
+              return(NULL)
+            }
             sql <- kpiDetails(input$KPI ,input$indGroup)
             cs <- connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators")
             labels <- getKPIs(cs, sql)
@@ -273,7 +285,10 @@ dashboard <- function(debug = FALSE) {
               if(debug){
                   log_event("Start getChildLabels")
               }
-            if (input$childKPI == "NA" || is.na(input$childKPI)) {
+            if (is.null(input$childKPI) ) {
+                if(debug){
+                  log_event(paste("getChildLabels KPI", input$childKPI, sep = ": "))
+              }
               return(NULL)
             }
             sql <- kpiDetails(input$childKPI, input$indGroup)
@@ -359,6 +374,18 @@ dashboard <- function(debug = FALSE) {
                   log_event("Start childKPIs")
               }
             mapping <- getMapping()
+            if(is.null(mapping)){
+               if(debug){
+                  log_event("childKPIs call to mapping returned NULL")
+              } 
+              return(NULL)
+            }
+            if(is.null(input$server) || is.null(input$KPI)){
+                if(debug){
+                    log_event(paste("childKPIs server", input$server, "KPI", input$KPI, sep = ": "))
+                }
+                return(NULL)
+            }
             children <- mapping %>%
                         filter(mapping$kpi == input$KPI)
             if (all(is.na(children$child_group_value_2))) {
@@ -405,10 +432,19 @@ dashboard <- function(debug = FALSE) {
               if(debug){
                   log_event("Start getChildKPI")
               }
-              if(is.na(input$server) || is.null(input$server)){
+              if(is.null(input$server) || is.null(input$childKPI)){
+                    if(debug){
+                       log_event(paste("getChildKPI server",input$server,"childKPI", input$childKPI, sep = ": "))
+                    }   
                   return(NULL)
               }
             mapping <- getMapping()
+            if(is.null(mapping)){
+               if(debug){
+                  log_event("getChildKPI call to mapping returned NULL")
+              } 
+              return(NULL)
+            }
             currentKPI <- mapping %>%
                         filter(mapping$kpi == input$childKPI)
             childKPI <- paste("Child KPI: ", unique(currentKPI$kpi), sep = "")
@@ -422,10 +458,19 @@ dashboard <- function(debug = FALSE) {
               if(debug){
                   log_event("Start getParentKPI")
               }
-              if(is.na(input$server) || is.null(input$server)){
+              if(is.null(input$server) || is.null(input$KPI)){
+                  if(debug){
+                       log_event(paste("getParentKPI server",input$server,"KPI", input$KPI, sep = ": "))
+                    }   
                   return(NULL)
               }
             mapping <- getMapping()
+            if(is.null(mapping)){
+               if(debug){
+                  log_event("getParentKPI call to mapping returned NULL")
+              } 
+              return(NULL)
+            }
             currentKPI <- mapping %>%
                         filter(mapping$kpi == input$KPI)
             parentKPI <- paste("Parent KPI: ", unique(currentKPI$parent_kpi), sep = "")
@@ -436,25 +481,44 @@ dashboard <- function(debug = FALSE) {
           })
 
           output$childKPI <- renderText({
-              if(is.na(input$server) || is.null(input$server)){
+              if(debug){
+                  log_event("Start childKPI")
+              }
+              
+              if(is.null(input$server)){
                   return(NULL)
               }
-            getChildKPI()
+            kpi <- getChildKPI()
+            if(is.null(kpi)){
+               if(debug){
+                  log_event("childKPI call to getChildKPI returned NULL")
+              } 
+              return(NULL)
+            }
+            if(debug){
+                  log_event("Finish childKPI")
+            }
+            kpi
           })
 
           output$parentKPI <- renderText({
-              if(is.na(input$server) || is.null(input$server)){
+              if(debug){
+                  log_event("Start parentKPI")
+              }
+              if(is.null(input$server)){
                   return(NULL)
               }
-            getParentKPI()
-          })
-
-
-          output$Indicators <- renderTable({
-            as.data.frame(getKPIs(
-                    connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators"),
-                    kpiDayIndicators(input$indGroup)
-                ))
+            kpi <- getParentKPI()
+            if(is.null(kpi)){
+               if(debug){
+                  log_event("parentKPI call to getParentKPI returned NULL")
+              } 
+              return(NULL)
+            }
+            if(debug){
+                  log_event("Finish parentKPI")
+            }
+            kpi
           })
 
           getProblemKPIs <- reactive({
@@ -499,6 +563,15 @@ dashboard <- function(debug = FALSE) {
 
           # Anomaly Trends
           getTrendAnomaly <- reactive({
+              if(debug){
+                  log_event("Start getTrendAnomaly")
+              }
+              if(is.null(input$server) || is.null(input$KPI)){
+                  if(debug){
+                    log_event(paste("getTrendAnomaly server", input$server, "KPI", input$KPI, sep = ": "))
+                }
+                return(NULL)
+              }
             sql <- kpiQuery(input$KPI, input$date_range[1], input$date_range[2], input$indGroup, input$indValue)
             cs <- connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators")
             kpiTable <- kpiTable(cs, sql)
@@ -526,10 +599,22 @@ dashboard <- function(debug = FALSE) {
                     anomalize(remainder, method = "gesd") %>%
                     time_recompose()
             kpiTable <- left_join(kpiTable, anomalies)
+            if(debug){
+                  log_event("Finish getTrendAnomaly")
+              }
             kpiTable
           })
 
           getTrendChildAnomaly <- reactive({
+              if(debug){
+                  log_event("Start getTrendChildAnomaly")
+              }
+              if(is.null(input$server) || is.null(input$KPI)){
+                  if(debug){
+                    log_event(paste("getTrendChildAnomaly server", input$server, "KPI", input$KPI, sep = ": "))
+                }
+                  return(NULL)
+              }
               sql <- kpiQuery(input$childKPI, input$date_range[1], input$date_range[2], input$indGroup, input$indValue)
               cs <- connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators")
               kpiTable <- kpiTable(cs, sql)
@@ -556,14 +641,28 @@ dashboard <- function(debug = FALSE) {
                     anomalize(remainder, method = "gesd") %>%
                     time_recompose()
               kpiTable <- left_join(kpiTable, anomalies)
+              if(debug){
+                  log_event("Finish getTrendChildAnomaly")
+              }
               kpiTable
-            
           })
 
 
           output$trend <- renderPlotly({
               df <- getTrendAnomaly()
+              if(is.null(df)){
+                  if(debug){
+                      log_event("trend call to getTrendAnomaly returned NULL")
+                  }
+                  return(NULL)
+              }
               label <- getLabels()
+              if(is.null(label)){
+                  if(debug){
+                      log_event("trend call to getLabels returned NULL")
+                  }
+                  return(NULL)
+              }
               p <- plot_ly(
                         df,
                         x = ~Date,
@@ -589,8 +688,20 @@ dashboard <- function(debug = FALSE) {
           })
 
           output$trendChild <- renderPlotly({
-              label <- getChildLabels()
               df <- getTrendChildAnomaly()
+              if(is.null(df)){
+                  if(debug){
+                      log_event("trend call to getTrendChildAnomaly returned NULL")
+                  }
+                  return(NULL)
+              }
+              label <- getChildLabels()
+              if(is.null(label)){
+                  if(debug){
+                      log_event("trend call to getChildLabels returned NULL")
+                  }
+                  return(NULL)
+              }
               p <- plot_ly(
                         df,
                         x = ~Date,
