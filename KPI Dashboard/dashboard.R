@@ -27,16 +27,88 @@ dashboard <- function(dataset) {
             x <- dataset
           })
 
+        observe({
+            query <- parseQueryString(session$clientData$url_search)
+            if (!is.null(query[['server']])) {
+                updateTextInput(session, "server", value = query[['server']])
+            }
+            if (!is.null(query[['kpi']])) {
+                updateTextInput(session, "KPI", value = query[['kpi']])
+            }
+            if (!is.null(query[['kpiType']])) {
+                updateTextInput(session, "indGroup", value = query[['kpiType']])
+            }
+            if (!is.null(query[['kpiValue']])) {
+                updateTextInput(session, "indValue", value = query[['kpiValue']])
+            }
+        })
+
+        #observe({
+        #    if(!all(is.na(input$problemKPIs_cells_selected))){
+        #        print(dataTableProxy("problemKPIs"))
+        #        if(nrow(input$problemKPIs_cells_selected) == 1){
+        #            updateTextInput(
+        #                    session, 
+        #                    "KPI", 
+        #                    value = problemKPIs[input$problemKPIs_cells_selected,1]
+        #                )
+        #        }
+        #        else{
+        #            updateTextInput(
+        #                    session, 
+        #                    "problemKPIs_cells_selected", 
+        #                    value = tail(input$problemKPIs_cells_selected, n =1)
+        #            )
+        #        }
+        #    }
+        #})
+          output$KPIGroups <- renderUI({
+              if(input$server == 'islandhealth'){
+                  return( radioButtons(  "indGroup", label = "KPI",
+                            choices = c(
+                                    "Bed Utilization" = "Beds",
+                                    "ALC Utilization" = "ALC Beds",
+                                    "ADT Events" = "transfers")))
+              }else{
+                  return( radioButtons( "indGroup", label = "KPI", 
+                            choices = c("Bed Utilization" = "Beds")))
+              }
+          })
+
+          output$KPIValues <- renderUI({
+              if(input$server == 'islandhealth'){
+                if(input$indGroup == 'transfers'){
+                    return( radioButtons( "indValue", label = "Select Value",
+                            choices = c(
+                                    "Primary Value" = "1",
+                                    "Admits" = "2",
+                                    "Discharges" = "3",
+                                    "Transfers" = "4",
+                                    "Other" = "5")))
+                }
+                else{
+                    return(radioButtons("indValue", label = "Select Value", 
+                            choices = c(
+                                "Primary Value" = "1")))
+                }
+              }
+              else{
+                  return(radioButtons("indValue",label = "Select Value",
+                            choices = c(
+                                    "Primary Value" = "1")))
+              }
+          })
+
           # Get KPI hierarchy mapping
           getMapping <- reactive({
             as.data.frame(getKPIs(
                     connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators"),
-                    kpiMapping()
+                    kpiMapping(input$indGroup)
                 ))
           })
 
           getLabels <- reactive({
-            sql <- kpiDetails(input$KPI)
+            sql <- kpiDetails(input$KPI ,input$indGroup)
             cs <- connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators")
             labels <- getKPIs(cs, sql)
             title <- ""
@@ -113,7 +185,7 @@ dashboard <- function(dataset) {
             if (input$childKPI == "NA" || is.na(input$childKPI)) {
               return(NULL)
             }
-            sql <- kpiDetails(input$childKPI)
+            sql <- kpiDetails(input$childKPI, input$indGroup)
             cs <- connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators")
             labels <- getKPIs(cs, sql)
             title <- ""
@@ -276,7 +348,7 @@ dashboard <- function(dataset) {
           output$Indicators <- renderTable({
             as.data.frame(getKPIs(
                     connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators"),
-                    kpiDayIndicators()
+                    kpiDayIndicators(input$indGroup)
                 ))
           })
 
@@ -290,7 +362,7 @@ dashboard <- function(dataset) {
             anomaly.counts <- data.frame(matrix(ncol = 2, nrow = 0))
             names(anomaly.counts) <- c('ind_id', 'anomalies')
             for (i in 1:length(ind_ids)) {
-              sql <- kpiQuery(ind_ids[[i]], input$date_range[1], input$date_range[2])
+              sql <- kpiQuery(ind_ids[[i]], input$date_range[1], input$date_range[2], input$indGroup, input$indValue)
               cs <- connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators")
               df <- as_data_frame(kpiTable(cs, sql))
               if (nrow(df) < 10) {
@@ -302,56 +374,84 @@ dashboard <- function(dataset) {
               df <- as_data_frame(df)
 
               anomalies <- df %>%
-                            time_decompose(ind_value_1, method = "twitter", trend = "1 month") %>%
+                            time_decompose(ind_value, method = "twitter", trend = "1 month") %>%
                             anomalize(remainder, method = "gesd") %>%
                             time_recompose()
               anomaly.counts[i,] <- list(ind_ids[[i]], sum(anomalies$anomaly == 'Yes'))
             }
-            sql <- kpiDetailsAll()
+            sql <- kpiDetailsAll(input$indGroup)
             cs <- connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators")
             labels <- getKPIs(cs, sql)
             qa_table <- inner_join(anomaly.counts[order(-anomaly.counts$anomalies),], labels)
             }
           })
 
-          output$problemKPIs <- renderDataTable(
-                getProblemKPIs()
+          output$problemKPIs <- renderDT(
+                getProblemKPIs(), selection = list(target = 'cell'), server = FALSE
             )
 
 
 
           # Anomaly Trends
           getTrendAnomaly <- reactive({
-            sql <- kpiQuery(input$KPI, input$date_range[1], input$date_range[2])
+            sql <- kpiQuery(input$KPI, input$date_range[1], input$date_range[2], input$indGroup, input$indValue)
             cs <- connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators")
             kpiTable <- kpiTable(cs, sql)
+            
 
+            # padd zero days
+            date_range <- as.data.frame(seq(as.Date(input$date_range[1]), as.Date(input$date_range[2]), "days"))
+            names(date_range) <- c("Date")
+            kpiTable <- left_join(date_range, kpiTable)
+            kpiTable[ is.na(kpiTable)] <- 0
+            kpiTable[3] <- input$KPI
 
-            sql <- kpiQuery(input$KPI, input$date_range[1], input$date_range[2])
+            sql <- kpiQuery(input$KPI, input$date_range[1], input$date_range[2], input$indGroup, input$indValue)
             cs <- connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators")
-            df <- as_data_frame(kpiTable(cs, sql))
+            df <- kpiTable(cs, sql)
+            df <- left_join(date_range, df)
+
+            df[is.na(df)] <- 0
+            df[3] <- input$KPI
+            df <- as_data_frame(df)
+
+
             anomalies <- df %>%
-                    time_decompose(ind_value_1, method = "twitter", trend = "1 month") %>%
+                    time_decompose(ind_value, method = "twitter", trend = "1 month") %>%
                     anomalize(remainder, method = "gesd") %>%
                     time_recompose()
-            kpiTable <- inner_join(kpiTable, anomalies)
+            kpiTable <- left_join(kpiTable, anomalies)
             kpiTable
           })
 
           getTrendChildAnomaly <- reactive({
             
-              sql <- kpiQuery(input$childKPI, input$date_range[1], input$date_range[2])
+              sql <- kpiQuery(input$childKPI, input$date_range[1], input$date_range[2], input$indGroup, input$indValue)
               cs <- connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators")
               kpiTable <- kpiTable(cs, sql)
 
-              sql <- kpiQuery(input$childKPI, input$date_range[1], input$date_range[2])
+              # padd zero days
+                date_range <- as.data.frame(seq(as.Date(input$date_range[1]), as.Date(input$date_range[2]), "days"))
+                names(date_range) <- c("Date")
+                kpiTable <- left_join(date_range, kpiTable)
+                kpiTable[ is.na(kpiTable)] <- 0
+                kpiTable[3] <- input$childKPI
+
+              sql <- kpiQuery(input$childKPI, input$date_range[1], input$date_range[2], input$indGroup, input$indValue)
               cs <- connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators")
-              df <- as_data_frame(kpiTable(cs, sql))
+              df <- kpiTable(cs, sql)
+              
+              df <- left_join(date_range, df)            
+              df[is.na(df)] <- 0
+              df[3] <- input$KPI
+              df <- as_data_frame(df)
+
+
               anomalies <- df %>%
-                    time_decompose(ind_value_1, method = "twitter", trend = "1 month") %>%
+                    time_decompose(ind_value, method = "twitter", trend = "1 month") %>%
                     anomalize(remainder, method = "gesd") %>%
                     time_recompose()
-              kpiTable <- inner_join(kpiTable, anomalies)
+              kpiTable <- left_join(kpiTable, anomalies)
               kpiTable
             
           })
@@ -363,7 +463,7 @@ dashboard <- function(dataset) {
               p <- plot_ly(
                         df,
                         x = ~Date,
-                        y = ~ind_value_1,
+                        y = ~ind_value,
                         name = "Current Value",
                         symbol = ~anomaly,
                         symbols = c('circle', 'x'),
@@ -378,20 +478,19 @@ dashboard <- function(dataset) {
                         yaxis = list(title = 'Value')
                     )
               p
-              mytext = paste("Current Value = ", df$ind_value_1, sep = "")
+              mytext = paste("Current Value = ", df$ind_value, sep = "")
               pp = plotly_build(p)
               style(pp, text = mytext, hoverinfo = "text", traces = c(1, 1))
             
           })
 
           output$trendChild <- renderPlotly({
-            
               label <- getChildLabels()
               df <- getTrendChildAnomaly()
               p <- plot_ly(
                         df,
                         x = ~Date,
-                        y = ~ind_value_1,
+                        y = ~ind_value,
                         name = "Current Value",
                         symbol = ~anomaly,
                         symbols = c('circle', 'x'),
@@ -406,7 +505,7 @@ dashboard <- function(dataset) {
                         yaxis = list(title = 'Value')
                     )
               p
-              mytext = paste("Current Value = ", df$ind_value_1, sep = "")
+              mytext = paste("Current Value = ", df$ind_value, sep = "")
               pp = plotly_build(p)
               style(pp, text = mytext, hoverinfo = "text", traces = c(1, 1))
             
@@ -416,17 +515,30 @@ dashboard <- function(dataset) {
           # Year over year series comparison
 
           getTrend <- reactive({
-            sql <- kpiPeriodComparisionTrend(input$KPI, input$date_range[1], input$date_range[2])
+            sql <- kpiPeriodComparisionTrend(input$KPI, input$date_range[1], input$date_range[2], input$indGroup, input$indValue)
             cs <- connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators")
             kpiTable <- kpiTable(cs, sql)
             kpiTable
+            # padd zero days
+            #date_range <- as.data.frame(seq(as.Date(input$date_range[1]), as.Date(input$date_range[2]), "days"))
+            #names(date_range) <- c("Date")
+            #kpiTable <- left_join(date_range, kpiTable)
+            #kpiTable[ is.na(kpiTable)] <- 0
+            #kpiTable[4] <- input$KPI
           })
 
           getTrendChild <- reactive({
-            sql <- kpiPeriodComparisionTrend(input$childKPI, input$date_range[1], input$date_range[2])
+            sql <- kpiPeriodComparisionTrend(input$childKPI, input$date_range[1], input$date_range[2], input$indGroup, input$indValue)
             cs <- connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators")
             kpiTable <- kpiTable(cs, sql)
             kpiTable
+
+            # padd zero days
+            #date_range <- as.data.frame(seq(as.Date(input$date_range[1]), as.Date(input$date_range[2]), "days"))
+            #names(date_range) <- c("Date")
+            #kpiTable <- left_join(date_range, kpiTable)
+            #kpiTable[ is.na(kpiTable)] <- 0
+            #kpiTable[4] <- input$childKPI
           })
 
 
@@ -500,14 +612,14 @@ dashboard <- function(dataset) {
 
 
         getTrendComp <- reactive({
-            sql <- kpiPeriodComparision(input$KPI, input$date_range[1], input$date_range[2])
+            sql <- kpiPeriodComparision(input$KPI, input$date_range[1], input$date_range[2], input$indGroup, input$indValue)
             cs <- connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators")
             kpiTable <- kpiTable(cs, sql)
             kpiTable
           })
 
           getTrendChildComp <- reactive({
-            sql <- kpiPeriodComparision(input$childKPI, input$date_range[1], input$date_range[2])
+            sql <- kpiPeriodComparision(input$childKPI, input$date_range[1], input$date_range[2], input$indGroup, input$indValue)
             cs <- connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators")
             kpiTable <- kpiTable(cs, sql)
             kpiTable

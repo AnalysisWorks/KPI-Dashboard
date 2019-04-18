@@ -3,6 +3,7 @@ require(shinydashboard)
 require(dplyr)
 require(RODBC)
 require(tibble)
+require(DT)
 source("Database\\getConnectionString.R")
 source("Database\\getKPIData.R")
 

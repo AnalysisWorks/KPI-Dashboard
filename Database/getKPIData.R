@@ -1,23 +1,31 @@
-kpiQuery <- function(kpi, start, end){
+kpiQuery <- function(kpi, start, end, group, value){
+    if(is.na(group) || is.na(value)){
+        return(NULL)
+    }
     sql <- sprintf("
     SELECT 
-        dt AS [Date], ind_value_1, ind_id
+        dt AS [Date], 
+        ind_value_%s AS ind_value, 
+        ind_id
     FROM 
         LH_Indicators.kpi.ind_data_detail
     WHERE 
         period_cd = 'day'
         AND dt BETWEEN '%s' AND '%s'
         AND ind_id = %s
-        AND ind_group_cd = 'Beds'
+        AND ind_group_cd = '%s'
     ORDER BY
         dt,
         ind_id
     
-    ;", start, end, kpi) 
+    ;",value, start, end, kpi, group) 
     sql
 }
-kpiMapping <- function(){
-    sql <- "
+kpiMapping <- function(group){
+    if(is.na(group)){
+        return(NULL)
+    }
+    sql <- sprintf("
    SELECT 
         L.ind_id AS kpi,
 		L.group_field_1,
@@ -129,12 +137,15 @@ kpiMapping <- function(){
                     )
             )
     WHERE 
-        L.ind_group_cd = 'Beds'
+        L.ind_group_cd = '%s'
         AND L.period_cd = 'day'
-    ;"    
+    ;", group)  
     sql
 }
-kpiPeriodComparision <- function(kpi, start, end){
+kpiPeriodComparision <- function(kpi, start, end, group, value){
+    if(is.na(group) || is.na(value)){
+        return(NULL)
+    }
     sql <- sprintf("        
     WITH last_date AS (
         SELECT 
@@ -147,7 +158,7 @@ kpiPeriodComparision <- function(kpi, start, end){
                 AND L.ind_group_cd = T.ind_group_cd
         WHERE
             T.period_cd = 'day'
-            AND T.ind_group_cd = 'Beds'
+            AND T.ind_group_cd = '%s'
     )
     , comparative_date AS (
         SELECT 
@@ -162,13 +173,13 @@ kpiPeriodComparision <- function(kpi, start, end){
         WHERE
             T.period_cd = 'day'
             AND L.ind_id = %s
-            AND T.ind_group_cd = 'Beds'
+            AND T.ind_group_cd = '%s'
             AND L._eff_start_dt <> D.last_assembly
     )
     ,filtered_kpis AS (
         SELECT 
             L.dt, 
-            L.ind_value_1, 
+            L.ind_value_%s, 
             L.ind_id,
             L._eff_start_dt,
             IIF( L._eff_start_dt = R.last_assembly, 1, IIF( L._eff_start_dt = D.comparative_date, 2, 0)) AS [rank]
@@ -178,6 +189,7 @@ kpiPeriodComparision <- function(kpi, start, end){
             ,comparative_date D
         WHERE 
             L.ind_id = %s
+            AND L.ind_group_cd = '%s'
             AND L.dt BETWEEN '%s' AND '%s'
             AND (L._eff_start_dt = R.last_assembly
             OR L._eff_start_dt = D.comparative_date)
@@ -185,8 +197,8 @@ kpiPeriodComparision <- function(kpi, start, end){
     SELECT
         D.dt AS [Date],
         %s AS ind_id,
-        SUM(IIF( [rank] = 1, L.ind_value_1, 0)) AS series_1,
-        SUM(IIF( [rank] = 2, L.ind_value_1, 0)) AS series_2
+        SUM(IIF( [rank] = 1, L.ind_value_%s, 0)) AS series_1,
+        SUM(IIF( [rank] = 2, L.ind_value_%s, 0)) AS series_2
     FROM
         LH_Common.dbo.ref_dt D
         LEFT JOIN filtered_kpis L
@@ -197,16 +209,19 @@ kpiPeriodComparision <- function(kpi, start, end){
         D.dt
     ORDER BY 
         D.dt  
-    ;", kpi, kpi, start, end, kpi, start, end)
+    ;", group, kpi, group, value, kpi, group, start, end, kpi, value, value, start, end)
 }
 
 
-kpiPeriodComparisionTrend <- function(kpi, start, end){
+kpiPeriodComparisionTrend <- function(kpi, start, end, group, value){
+    if(is.na(group) || is.na(value)){
+        return(NULL)
+    }
     sql <- sprintf("
     SELECT 
         L.dt AS [Date], 
-		L.ind_value_1 AS series_1, 
-		ISNULL( R.ind_value_1 , 0 ) AS series_2, 
+		L.ind_value_%s AS series_1, 
+		ISNULL( R.ind_value_%s , 0 ) AS series_2, 
 		L.ind_id
     FROM 
         LH_Indicators.kpi.ind_data_detail L
@@ -217,18 +232,21 @@ kpiPeriodComparisionTrend <- function(kpi, start, end){
     WHERE 
         L.period_cd = 'day'
         AND ( R.period_cd = 'day' OR R.period_cd IS NULL)
-        AND L.ind_group_cd = 'Beds'
-        AND ( R.ind_group_cd = 'Beds' OR R.ind_group_cd IS NULL)
+        AND L.ind_group_cd = '%s'
+        AND ( R.ind_group_cd = '%s' OR R.ind_group_cd IS NULL)
         AND L.dt BETWEEN '%s' AND '%s'
 		AND L.ind_id = %s
     ORDER BY
         L.ind_id,
 		L.dt
-    ;", start, end, kpi)
+    ;", value, value, group, group, start, end, kpi)
 }
 
-kpiDayIndicators <- function(){
-    sql <- "
+kpiDayIndicators <- function(group){
+    if(is.na(group)){
+        return(NULL)
+    }
+    sql <- sprintf("
     SELECT
         DISTINCT
         ind_id
@@ -236,11 +254,14 @@ kpiDayIndicators <- function(){
         LH_Indicators.kpi.ind_data_detail
     WHERE 
         period_cd = 'day'
-        AND ind_group_cd = 'Beds'
-    ;"
+        AND ind_group_cd = '%s'
+    ;",group ) 
 }
 
-kpiDetails <- function(kpi){
+kpiDetails <- function(kpi, group){
+    if(is.na(group)){
+        return(NULL)
+    }
     sql <- sprintf("
     SELECT  
         DISTINCT 
@@ -257,26 +278,32 @@ kpiDetails <- function(kpi){
 FROM 
 	[LH_Indicators].[kpi].[ind_data_detail]
 WHERE 
-    ind_id = %s ;", kpi)
+    ind_id = %s
+    AND ind_group_cd = '%s' ;", kpi, group)
     sql
 }
 
-kpiDetailsAll <- function(){
-    sql <- "
+kpiDetailsAll <- function(group){
+    if(is.na(group)){
+        return(NULL)
+    }
+    sql <- sprintf("
     SELECT  
         DISTINCT 
-      [ind_id],
-      [ind_group_cd],
-      [group_field_1],
-      [group_value_1],
-      [group_field_2],
-      [group_value_2],
-      [group_field_3],
-      [group_value_3],
-      [group_field_4],
-      [group_value_4]
-FROM 
-	[LH_Indicators].[kpi].[ind_data_detail]
-    ;"
+        [ind_id],
+        [ind_group_cd],
+        [group_field_1],
+        [group_value_1],
+        [group_field_2],
+        [group_value_2],
+        [group_field_3],
+        [group_value_3],
+        [group_field_4],
+        [group_value_4]
+    FROM 
+        [LH_Indicators].[kpi].[ind_data_detail]
+    WHERE 
+        ind_group_cd = '%s'
+    ;", group)
     sql
 }

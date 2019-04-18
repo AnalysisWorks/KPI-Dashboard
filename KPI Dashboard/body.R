@@ -5,7 +5,7 @@ require(dplyr)
 getBody <- function() {
   body <- dashboardBody(
         getTabItems(),
-        dataTableOutput("problemKPIs")
+        DTOutput("problemKPIs")
     )
   body
 }

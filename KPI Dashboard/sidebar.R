@@ -7,15 +7,17 @@ getSidebar <- function() {
         getSidebarMenu(),
 
         radioButtons(
-        "server",
-        label = "Client",
-        choices = c(
-                "William Osler" = "wohs",
-                "Vancouver Coastal" = "vancouvercoastal",
-                "Vancouver Island Health" = "islandhealth",
-                "Alberta Health" = "AHSEdmontonZone"
-                )
+            "server",
+            label = "Client",
+            choices = c(
+                    "Vancouver Island Health" = "islandhealth",
+                    "William Osler" = "wohs",
+                    "Vancouver Coastal" = "vancouvercoastal",
+                    "Alberta Health" = "AHSEdmontonZone"
+                    )
         ),
+        uiOutput("KPIGroups"),
+        uiOutput("KPIValues"),
         dateRangeInput(
             "date_range",
             "Date range:",
