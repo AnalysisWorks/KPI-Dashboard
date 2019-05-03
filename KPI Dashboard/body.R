@@ -58,6 +58,18 @@ getTabItems <- function() {
                     plotlyOutput('interactiveAggregateChild', height = "400px", width = "100%")
                 )
             )
+        ),
+        tabItem(
+            tabName = "prediction_anomalies",
+            tabBox(
+                title = "Trend Comparison",
+                id = "prediction_trend",
+                width = "100%",
+                tabPanel(
+                    "Current KPI Predicted Values",
+                    plotlyOutput('kpiPrediction', height = "400px", width = "100%")
+                )
+            )
         )
     )
   tabItems

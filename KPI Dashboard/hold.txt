@@ -1,0 +1,111 @@
+if(debug){
+                  log_event("Start KPIValues")
+              }
+              if(is.null(input$server) || is.null(input$indGroup)){
+                  if(debug){
+                  log_event(paste( "KPIGroups Server", input$server, "KPI Group", input$indGroup, sep = ": "))
+              }  
+                  return(NULL)
+              }
+
+              query <- parseQueryString(session$clientData$url_search)
+              if(input$server == 'islandhealth' || input$server == 'vancouvercoastal'){
+                if(input$indGroup == 'transfers'){
+                    if(debug){
+                        log_event("Return KPIValues")
+                    }
+                    if(!is.null(query[['kpiType']])){
+                        return( selectizeInput( 
+                                "indValue", label = "Select Value",
+                                choices = c(
+                                    "Primary Value" = "1",
+                                    "Admits" = "2",
+                                    "Discharges" = "3",
+                                    "Transfers" = "4",
+                                    "Other" = "5"),
+                                selected = query[['kpiValue']],
+                                options = list(
+                                    placeholder = 'Select a KPI Value'
+                            )))
+                    }
+                    return( selectizeInput( 
+                                "indValue", label = "Select Value",
+                                choices = c(
+                                    "Primary Value" = "1",
+                                    "Admits" = "2",
+                                    "Discharges" = "3",
+                                    "Transfers" = "4",
+                                    "Other" = "5"),
+                                options = list(
+                                    placeholder = 'Select a KPI Value'
+                            )))
+                }
+                if(input$indGroup == 'financials'){
+                     if(debug){
+                        log_event("Return KPIValues")
+                    }
+                    if(!is.null(query[['kpiType']])){
+                        return( selectizeInput( 
+                                "indValue", label = "Select Value",
+                                choices = c(
+                                    "Actual Period" = "1",
+                                    "Actual YTD" = "2",
+                                    "Budget Period" = "3",
+                                    "Budget YTD" = "4"),
+                                selected = query[['kpiValue']],
+                                options = list(
+                                    placeholder = 'Select a KPI Value'
+                            )))
+                    }
+                    return( selectizeInput( 
+                                "indValue", label = "Select Value",
+                                choices = c(
+                                    "Actual Period" = "1",
+                                    "Actual YTD" = "2",
+                                    "Budget Period" = "3",
+                                    "Budget YTD" = "4"),
+                                options = list(
+                                    placeholder = 'Select a KPI Value'
+                            )))
+                }
+                else{
+                    if(debug){
+                        log_event("Return Other Islandhealth KPIValues")
+                    }
+                    if(!is.null(query[['kpiType']])){
+                        return( selectizeInput( 
+                                "indValue", label = "Select Value",
+                                choices = c(
+                                    "Primary Value" = "1"),
+                                selected = query[['kpiValue']],
+                                options = list(
+                                    placeholder = 'Select a KPI Value'
+                            )))
+                    }
+                    return(selectizeInput(
+                            "indValue", label = "Select Value", 
+                            choices = c("Primary Value" = "1"),
+                            options = list(
+                                    placeholder = 'Select a KPI Value'
+                            )))
+                }
+              }
+              else{
+                  if(debug){
+                        log_event("Return All Other KPIValues")
+                    }
+                  if(!is.null(query[['kpiType']])){
+                        return( selectizeInput( 
+                                "indValue", label = "Select Value",
+                                choices = c("Primary Value" = "1"),
+                                selected = query[['kpiValue']],
+                                options = list(
+                                    placeholder = 'Select a KPI Value'
+                            )))
+                    }
+                  return(selectizeInput("indValue",label = "Select Value",
+                            choices = c("Primary Value" = "1"),
+                            options = list(
+                                    placeholder = 'Select a KPI Value'
+                            )))
+              }

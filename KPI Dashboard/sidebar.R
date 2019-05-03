@@ -28,6 +28,8 @@ getSidebar <- function() {
         uiOutput("KPIValues"),
         uiOutput("KPI"),
         uiOutput("childKPIs"),
+        actionButton("parent", "Select Parent"),
+        actionButton("child", "Select Child"),
         actionButton("anomalies", "Calculate Anomalies"),
         textOutput("parentKPI"),
         textOutput("childKPI"),
@@ -61,6 +63,11 @@ getSidebarMenu <- function() {
             menuSubItem(
                 "Period Aggregates",
                 tabName = "period_comparison_interval_trend",
+                icon = icon("th")
+            ),
+            menuSubItem(
+                "Prediction",
+                tabName = "prediction_anomalies",
                 icon = icon("th")
             )
         )        
