@@ -7,13 +7,13 @@ require(DT)
 source("Database\\getConnectionString.R")
 source("Database\\getKPIData.R")
 
-app <- "KPI Dashboard"
+app <- "QA Dashboard"
 
 source(paste(app, "header.R", sep = "\\"))
 source(paste(app, "sidebar.R", sep = "\\"))
 source(paste(app, "body.R", sep = "\\"))
 source(paste(app, "dashboard.R", sep = "\\"))
-source(paste(app, "prediction.R", sep = "\\"))
+#source(paste(app, "prediction.R", sep = "\\"))
 
 # Establish network conditions
 options(shiny.host = "0.0.0.0")
