@@ -4,7 +4,7 @@ require(dplyr)
 
 getHeader <- function(){
     header <- dashboardHeader( 
-        title = "Database Anomalies",              
+        title = "Database Anomalies",
         getDropDownMessage(),
         getDropDownNotification(),
         getDropDownTasks()

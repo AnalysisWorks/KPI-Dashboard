@@ -7,150 +7,49 @@ library(anomalize)
 library(tidyverse)
 library(plotly)
 library(DT)
+library(sparkline)
 
-kpiValueFunction <- function( input, output, session, server, parsedArgs, group){
-
-    if(debug){
-        log_event("Start KPIValues")
-    }
-    if(is.null(server) || is.null(group)){
-        if(debug){
-            log_event(paste( "KPIGroups Server", server, "KPI Group", group, sep = ": "))
-    }  
-        return(NULL)
-    }
-
-    if(server == 'islandhealth' || server == 'vancouvercoastal'){
-    if(group == 'transfers'){
-        if(debug){
-            log_event("Return KPIValues")
-        }
-        if(!is.null(parsedArgs[['kpiType']])){
-            return( selectizeInput( 
-                    "indValue", label = "Select Value",
-                    choices = c(
-                        "Primary Value" = "1",
-                        "Admits" = "2",
-                        "Discharges" = "3",
-                        "Transfers" = "4",
-                        "Other" = "5"),
-                    selected = parsedArgs[['kpiValue']],
-                    options = list(
-                        placeholder = 'Select a KPI Value'
-                )))
-        }
-        return( selectizeInput( 
-                    "indValue", label = "Select Value",
-                    choices = c(
-                        "Primary Value" = "1",
-                        "Admits" = "2",
-                        "Discharges" = "3",
-                        "Transfers" = "4",
-                        "Other" = "5"),
-                    options = list(
-                        placeholder = 'Select a KPI Value'
-                )))
-    }
-    if(group == 'financials'){
-            if(debug){
-            log_event("Return KPIValues")
-        }
-        if(!is.null(parsedArgs[['kpiType']])){
-            return( selectizeInput( 
-                    "indValue", label = "Select Value",
-                    choices = c(
-                        "Actual Period" = "1",
-                        "Actual YTD" = "2",
-                        "Budget Period" = "3",
-                        "Budget YTD" = "4"),
-                    selected = parsedArgs[['kpiValue']],
-                    options = list(
-                        placeholder = 'Select a KPI Value'
-                )))
-        }
-        return( selectizeInput( 
-                    "indValue", label = "Select Value",
-                    choices = c(
-                        "Actual Period" = "1",
-                        "Actual YTD" = "2",
-                        "Budget Period" = "3",
-                        "Budget YTD" = "4"),
-                    options = list(
-                        placeholder = 'Select a KPI Value'
-                )))
-    }
-    else{
-        if(debug){
-            log_event("Return Other Islandhealth KPIValues")
-        }
-        if(!is.null(parsedArgs[['kpiType']])){
-            return( selectizeInput( 
-                    "indValue", label = "Select Value",
-                    choices = c(
-                        "Primary Value" = "1"),
-                    selected = parsedArgs[['kpiValue']],
-                    options = list(
-                        placeholder = 'Select a KPI Value'
-                )))
-        }
-        return(selectizeInput(
-                "indValue", label = "Select Value", 
-                choices = c("Primary Value" = "1"),
-                options = list(
-                        placeholder = 'Select a KPI Value'
-                )))
-    }
-    }
-    else{
-        if(debug){
-            log_event("Return All Other KPIValues")
-        }
-        if(!is.null(parsedArgs[['kpiType']])){
-            return( selectizeInput( 
-                    "indValue", label = "Select Value",
-                    choices = c("Primary Value" = "1"),
-                    selected = parsedArgs[['kpiValue']],
-                    options = list(
-                        placeholder = 'Select a KPI Value'
-                )))
-        }
-        return(selectizeInput("indValue",label = "Select Value",
-                choices = c("Primary Value" = "1"),
-                options = list(
-                        placeholder = 'Select a KPI Value'
-                )))
-    }
-
-}
 
 dashboard <- function(debug = FALSE) {
-  #, mapping
-  if(debug){
-      set_logging()
-  }
-  shinyApp(
-        myUI <- dashboardPage(
-            skin = "purple",
-            getHeader(),
-            getSidebar(),
-            getBody()
-        ),
+    if(debug){
+        set_logging()
+    }
+    enableBookmarking( store = "server")
+    shinyApp(
+        ui <- function(request){
+            myUI <- dashboardPage(
+                    skin = "purple",
+                    getHeader(),
+                    getSidebar(),
+                    getBody()
+                )
+        },
         myServer <- function(input, output, session) {
-          if(debug){
-             set_logging_session()
+        if(debug){
+            set_logging_session()
         }
           # Close dashboard app entirely
-          observe({
-            if (input$close > 0 && !is.na(input$close)) stopApp()
-          })
         observe({
+            if (input$close > 0 && !is.na(input$close)) stopApp()
+        })
+
+        observe({
+            req(input$server, input$date_range)
             query <- parseQueryString(session$clientData$url_search)
             if (!is.null(query[['server']])) {
                 updateSelectizeInput(session, "server", selected = query[['server']])
             }
-            if (!is.null(query[['kpi']])) {
-                updateSelectizeInput(session, "KPI", selected = query[['kpi']])
+            if (!is.null(query[['start_dt']])) {
+                updateDateRangeInput(session, "date_range", start = query[['start_dt']])
             }
+            if (!is.null(query[['end_dt']])) {
+                updateDateRangeInput(session, "date_range", end = query[['end_dt']])
+            }
+        })
+
+        observe({
+            req(input$indGroup, input$indValue)
+            query <- parseQueryString(session$clientData$url_search)
             if (!is.null(query[['kpiType']])) {
                 updateSelectizeInput(session, "indGroup", selected = query[['kpiType']])
             }
@@ -158,6 +57,15 @@ dashboard <- function(debug = FALSE) {
                 updateSelectizeInput(session, "indValue", selected = query[['kpiValue']])
             }
         })
+
+        observe({
+            req(input$KPI)
+            query <- parseQueryString(session$clientData$url_search)
+            if (!is.null(query[['kpi']])) {
+                updateSelectizeInput(session, "KPI", selected = query[['kpi']])
+            }
+        })
+
         observeEvent(input$parent, {
             kpi <- getParentKPI()
             if( is.null(kpi) || is.na(kpi)){
@@ -173,458 +81,227 @@ dashboard <- function(debug = FALSE) {
             }
             updateSelectizeInput(session, "KPI", selected = kpi)
         })
-          output$KPIGroups <- renderUI({
-              if(debug){
-                  log_event("Start KPIGroups")
-              }
-              if(is.null(input$server)){
-                  if(debug){
-                  log_event(paste( "KPIGroups Server", input$server, sep = ": "))
-                }   
-                  return(NULL)
-              }
-              query <- parseQueryString(session$clientData$url_search)
-              if(input$server == 'islandhealth' || input$server == 'vancouvercoastal'){
-                  if (!is.null(query[['kpiType']])) {
-                      return( selectizeInput(
-                                "indGroup", label = "KPI",
-                                choices = c(
-                                        "Bed Utilization" = "Beds",
-                                        "ALC Utilization" = "ALC Beds",
-                                        "ADT Events" = "transfers"),
-                                selected = query[['kpiType']],
-                                options = list(
-                                    placeholder = 'Select a KPI type'
-                            )))
-                    }
-                  if(input$server == 'islandhealth'){
-                    return( selectizeInput(
-                                "indGroup", label = "KPI",
-                                choices = c(
-                                        "Bed Utilization" = "Beds",
-                                        "ALC Utilization" = "ALC Beds",
-                                        "ADT Events" = "transfers",
-                                        "Financials" = "financials"),
-                                selected = query[['kpiType']],
-                                options = list(
-                                    placeholder = 'Select a KPI type'
-                            )))
-                  }
-                  return( selectizeInput(
-                            "indGroup", label = "KPI",
-                            choices = c(
-                                    "Bed Utilization" = "Beds",
-                                    "ALC Utilization" = "ALC Beds",
-                                    "ADT Events" = "transfers"),
-                            options = list(
-                                placeholder = 'Select a KPI type'
-                            )))
-              }else{
-                  if (!is.null(query[['kpiType']])) {
-                      return( selectizeInput(
-                                "indGroup", label = "KPI",
-                                choices = c("Bed Utilization" = "Beds"),
-                                selected = query[['kpiType']],
-                                options = list(
-                                    placeholder = 'Select a KPI type'
-                            )))
-                    }
-                  return( selectizeInput( 
-                            "indGroup", label = "KPI", 
-                            choices = c("Bed Utilization" = "Beds"),
-                            options = list(
-                                placeholder = 'Select a KPI type'
-                            )))
-              }
-          })
 
-          output$KPIValues <- renderUI({
-              if(debug){
-                  log_event("Start KPIValues")
-              }
-              if(is.null(input$server) || is.null(input$indGroup)){
-                  if(debug){
-                  log_event(paste( "KPIGroups Server", input$server, "KPI Group", input$indGroup, sep = ": "))
-              }  
-                  return(NULL)
-              }
+        output$KPIGroups <- renderUI({
+            req(input$server)
+            server <- input$server
+            parsedArgs <- parseQueryString(session$clientData$url_search)
+            return(kpiGroupsUI(inputId = "indGroup", id = "KPIGroups", server = server, parsedArgs = parsedArgs, debug = debug))
+        })
 
-              query <- parseQueryString(session$clientData$url_search)
-              if(input$server == 'islandhealth' || input$server == 'vancouvercoastal'){
-                if(input$indGroup == 'transfers'){
-                    if(debug){
-                        log_event("Return KPIValues")
-                    }
-                    if(!is.null(query[['kpiType']])){
-                        return( selectizeInput( 
-                                "indValue", label = "Select Value",
-                                choices = c(
-                                    "Primary Value" = "1",
-                                    "Admits" = "2",
-                                    "Discharges" = "3",
-                                    "Transfers" = "4",
-                                    "Other" = "5"),
-                                selected = query[['kpiValue']],
-                                options = list(
-                                    placeholder = 'Select a KPI Value'
-                            )))
-                    }
-                    return( selectizeInput( 
-                                "indValue", label = "Select Value",
-                                choices = c(
-                                    "Primary Value" = "1",
-                                    "Admits" = "2",
-                                    "Discharges" = "3",
-                                    "Transfers" = "4",
-                                    "Other" = "5"),
-                                options = list(
-                                    placeholder = 'Select a KPI Value'
-                            )))
-                }
-                if(input$indGroup == 'financials'){
-                     if(debug){
-                        log_event("Return KPIValues")
-                    }
-                    if(!is.null(query[['kpiType']])){
-                        return( selectizeInput( 
-                                "indValue", label = "Select Value",
-                                choices = c(
-                                    "Actual Period" = "1",
-                                    "Actual YTD" = "2",
-                                    "Budget Period" = "3",
-                                    "Budget YTD" = "4"),
-                                selected = query[['kpiValue']],
-                                options = list(
-                                    placeholder = 'Select a KPI Value'
-                            )))
-                    }
-                    return( selectizeInput( 
-                                "indValue", label = "Select Value",
-                                choices = c(
-                                    "Actual Period" = "1",
-                                    "Actual YTD" = "2",
-                                    "Budget Period" = "3",
-                                    "Budget YTD" = "4"),
-                                options = list(
-                                    placeholder = 'Select a KPI Value'
-                            )))
-                }
-                else{
-                    if(debug){
-                        log_event("Return Other Islandhealth KPIValues")
-                    }
-                    if(!is.null(query[['kpiType']])){
-                        return( selectizeInput( 
-                                "indValue", label = "Select Value",
-                                choices = c(
-                                    "Primary Value" = "1"),
-                                selected = query[['kpiValue']],
-                                options = list(
-                                    placeholder = 'Select a KPI Value'
-                            )))
-                    }
-                    return(selectizeInput(
-                            "indValue", label = "Select Value", 
-                            choices = c("Primary Value" = "1"),
-                            options = list(
-                                    placeholder = 'Select a KPI Value'
-                            )))
-                }
-              }
-              else{
-                  if(debug){
-                        log_event("Return All Other KPIValues")
-                    }
-                  if(!is.null(query[['kpiType']])){
-                        return( selectizeInput( 
-                                "indValue", label = "Select Value",
-                                choices = c("Primary Value" = "1"),
-                                selected = query[['kpiValue']],
-                                options = list(
-                                    placeholder = 'Select a KPI Value'
-                            )))
-                    }
-                  return(selectizeInput("indValue",label = "Select Value",
-                            choices = c("Primary Value" = "1"),
-                            options = list(
-                                    placeholder = 'Select a KPI Value'
-                            )))
-              }
-          })
+        output$KPIValues <- renderUI({
+            req(input$server, input$indGroup)
+            server <- input$server
+            parsedArgs <- parseQueryString(session$clientData$url_search)
+            group <- input$indGroup
+            return(kpiValueUI(inputId = "indValue", id = "KPIValues", server, parsedArgs, group, debug))
+        })
 
-            output$KPI <- renderUI({
-                if(debug){
-                  log_event("Start KPI")
-                }
-                if(is.null(input$server) || is.null(input$indGroup)){
-                    if(debug){
-                    log_event(paste("KPI server:", input$server, "KPI Group:", input$indGroup, sep = " "))
-                }     
-                  return(NULL)
-                }
-                sql <- kpiDetailsAll(input$indGroup)
-                cs <- connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators")
-                kpis <- getKPIs(cs, sql)
-                if(debug){
-                    log_event( "Return KPIs")
-                }
-                query <- parseQueryString(session$clientData$url_search)
-                if (!is.null(query[['kpi']])) {
-                     return(
-                        selectizeInput(
-                            "KPI", "Current KPI", 
-                            choices = unique(kpis$ind_id),
-                            selected = query[['kpi']]
-                        )
-                    )
-                }
+        output$KPIout <- renderUI({
+            req(input$server, input$indGroup)
+            server <- input$server
+            parsedArgs <- parseQueryString(session$clientData$url_search)
+            group <- input$indGroup
+            return(kpiUI(inputId = "KPI", id = "KPIout", "Select Value", server, parsedArgs, group, debug))
+        })
+
+        # Get KPI hierarchy mapping
+        getMapping <- reactive({
+            mapping <- getCompleteMapping(input$server, input$indGroup, debug)
+        })
+
+        getServer <- reactive({
+            serv <- input$server
+        })
+
+        getGrouping <- reactive({
+            group <- input$indGroup
+        })
+
+        getVal <- reactive({
+            val <- input$indValue
+        })
+
+        getStartDt <- reactive({
+            start <- input$date_range[1]
+        })
+        getEndDt <- reactive({
+            start <- input$date_range[2]
+        })
+
+        output$currentLastAssemble <- renderValueBox({
+            req(input$server, input$KPI, input$indGroup, input$indValue)
+            valueBox(
+                subtitle = "Last date in current assembly",
+                getKPILastDate(debug, input$KPI, input$indGroup, input$indValue, input$server),
+                icon = icon("credit-card"),
+                color = "purple"
+            )
+        })
+        output$currentAverageBox <- renderValueBox({
+            req(input$server, input$KPI, input$date_range, input$indGroup, input$indValue)
+            valueBox(
+                subtitle = "Current assembly Average",
+                getKPIAverage(debug, input$KPI, input$date_range[1], input$date_range[2], input$indGroup, input$indValue, input$server),
+                icon = icon("credit-card"),
+                color = "purple"
+            )
+        })
+        output$currentPercBox <- renderValueBox({
+            req(input$server, input$KPI, input$date_range, input$indGroup, input$indValue)
+            input$target_perc
+            valueBox(
+                subtitle = paste0("Current cycle ",input$target_perc," Percentile"),
+                getKPIPercentile(debug, input$KPI, input$date_range[1], input$date_range[2], input$indGroup, input$indValue, input$server, input$target_perc),
+                icon = icon("credit-card"),
+                color = "purple"
+            )
+        })
+        output$childLastAssemble <- renderValueBox({
+            req(input$server, input$childKPI, input$indGroup, input$indValue)
+            if( input$chartTabs == "period_comparison_interval_trend"){
                 return(
-                    selectizeInput(
-                        "KPI", "Current KPI", 
-                        choices = unique(kpis$ind_id)
+                    valueBox(
+                        subtitle = "Last date in previous Assembly",
+                        getKPILastCycleDate(debug, input$KPI, input$indGroup, input$indValue, input$server),
+                        icon = icon("credit-card"),
+                        color = "purple"
                     )
                 )
-            })
-          # Get KPI hierarchy mapping
-          getMapping <- reactive({
-              if(debug){
-                  log_event("Start getMapping")
-              }
-              if(is.null(input$server) || is.null(input$indGroup)){
-                   if(debug){
-                  log_event(paste("KPI server:", input$server, "KPI Group:", input$indGroup, sep = " "))
-                   }
-                   return(NULL)
-              }     
-            df <- as.data.frame(getKPIs(
-                    connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators"),
-                    kpiMapping(input$indGroup)
-                ))
-            if(debug){
-                  log_event("Finished getMapping")
-             }
-             df
-          })
+            }
+            return(
+                valueBox(
+                    subtitle = "Last date for child KPI",
+                    getKPILastDate(debug, input$childKPI, input$indGroup, input$indValue, input$server),
+                    icon = icon("credit-card"),
+                    color = "purple"
+                )
+            )
+        })
+        output$childAverageBox <- renderValueBox({
+            req(input$server, input$childKPI, input$date_range, input$indGroup, input$indValue)
+            if( input$chartTabs == "period_comparison_interval_trend"){
+                return(
+                    valueBox(
+                        subtitle = "Last Cycle Average",
+                        getKPILastCycleAverage(debug, input$KPI, input$date_range[1], input$date_range[2], input$indGroup, input$indValue, input$server),
+                        icon = icon("credit-card"),
+                        color = "purple"
+                    )
+                )
+            }
+            return(
+                valueBox(
+                    subtitle = "Child KPI Average",
+                    getKPIAverage(debug, input$childKPI, input$date_range[1], input$date_range[2], input$indGroup, input$indValue, input$server),
+                    icon = icon("credit-card"),
+                    color = "purple"
+                )
+            )
+        })
+        output$childPercBox <- renderValueBox({
+            req(input$server, input$childKPI, input$date_range, input$indGroup, input$indValue)
+            if( input$chartTabs == "period_comparison_interval_trend"){
+                return(
+                    valueBox(
+                        subtitle = paste0("Last Cycle ", input$target_perc," Percentile"),
+                        getKPILastCyclePercentile(debug, input$KPI, input$date_range[1], input$date_range[2], input$indGroup, input$indValue, input$server, input$target_perc),
+                        icon = icon("credit-card"),
+                        color = "purple"
+                    )
+                )
+            }
+            return(
+                valueBox(
+                    subtitle = paste0("Child ", input$target_perc," Percentile"),
+                    getKPIPercentile(debug, input$childKPI, input$date_range[1], input$date_range[2], input$indGroup, input$indValue, input$server, input$target_perc),
+                    icon = icon("credit-card"),
+                    color = "purple"
+                )
+            )
+        })
 
-          # Get KPI hierarchy mapping
-          getKeyMapping <- reactive({
-              if(debug){
-                  log_event("Start getKeyMapping")
-              }
-              if(is.null(input$server) || is.null(input$indGroup)){
-                   if(debug){
-                  log_event(paste("KPI server:", input$server, "KPI Group:", input$indGroup, sep = " "))
-                   }
-                   return(NULL)
-              }     
+
+        # Get KPI hierarchy mapping
+        getKeyMapping <- reactive({
+            if(debug){
+                log_event("Start getKeyMapping")
+            }
+            if(is.null(input$server) || is.null(input$indGroup)){
+                if(debug){
+                log_event(paste("KPI server:", input$server, "KPI Group:", input$indGroup, sep = " "))
+                }
+                return(NULL)
+            }     
             df <- as.data.frame(getKPIs(
                     connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators"),
                     kpiKeyMapping(input$indGroup)
                 ))
             if(debug){
-                  log_event("Finished getKeyMapping")
-             }
-             df
-          })
+                log_event("Finished getKeyMapping")
+            }
+            df
+        })
 
-          getLabels <- reactive({
-              if(debug){
-                  log_event("Start getLabels")
-              }
-            if (is.null(input$KPI) ) {
-                if(debug){
-                  log_event(paste("getLabels KPI", input$KPI, sep = ": "))
-              }
-              return(NULL)
+        getKPI <- reactive({
+            kpi <- input$KPI
+            if( kpi == "" || is.null(kpi)){
+                return(NULL)
             }
-            sql <- kpiDetails(input$KPI ,input$indGroup)
-            cs <- connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators")
-            labels <- getKPIs(cs, sql)
-            title <- ""
-            if (is.na(labels$group_field_1) || labels$group_field_1 == "NA") {
-              title <- paste(
-                    labels$ind_group_cd,
-                    "Authority Wide",
-                    sep = ": ")
+            kpi
+        })
+        getKPIchild <- reactive({
+            kpi <- input$childKPI
+            if( kpi == "" || is.null(kpi)){
+                return(NULL)
             }
-            else if (is.na(labels$group_field_2) || labels$group_field_2 == "NA") {
-              title <- paste(
-                    labels$ind_group_cd,
-                    paste(
-                            labels$group_field_1,
-                            labels$group_value_1,
-                            sep = ": "),
-                    sep = ", ")
-            }
-            else if (is.na(labels$group_field_3) || labels$group_field_3 == "NA") {
-              title <- paste(
-                    labels$ind_group_cd,
-                    paste(
-                            labels$group_field_1,
-                            labels$group_value_1,
-                            sep = ": "),
-                    paste(
-                            labels$group_field_2,
-                            labels$group_value_2,
-                            sep = ": "),
-                    sep = ", ")
-            }
-            else if (is.na(labels$group_field_4) || labels$group_field_4 == "NA") {
-              title <- paste(
-                    labels$ind_group_cd,
-                    paste(
-                            labels$group_field_1,
-                            labels$group_value_1,
-                            sep = ": "),
-                    paste(
-                            labels$group_field_2,
-                            labels$group_value_2,
-                            sep = ": "),
-                    paste(
-                            labels$group_field_3,
-                            labels$group_value_3,
-                            sep = ": "),
-                    sep = ", ")
-            }
-            else {
-              title <- paste(
-                    labels$ind_group_cd,
-                    paste(
-                            labels$group_field_1,
-                            labels$group_value_1,
-                            sep = ": "),
-                    paste(
-                            labels$group_field_2,
-                            labels$group_value_2,
-                            sep = ": "),
-                    paste(
-                            labels$group_field_3,
-                            labels$group_value_3,
-                            sep = ": "),
-                    paste(
-                            labels$group_field_4,
-                            labels$group_value_4,
-                            sep = ": "),
-                    sep = ", ")
-            }
+            kpi
+        })
+        
+        getLabels <- reactive({
+            kpi <- getKPI()
+            labels <- getChartLabels(kpi = kpi, server = input$server, group = input$indGroup, debug = debug)
+        })
+
+        getChildLabels <- reactive({
+            kpi <- getKPIchild()
+            labels <- getChartLabels(kpi = kpi, server = input$server, group = input$indGroup, debug = debug)
+        })
+
+        output$childKPIs <- renderUI({
+            req(input$server, input$KPI, input$indGroup)
+            inputId <- "childKPI"
+            id <- "childKPIs"
+            kpi <- input$KPI
+            server <- input$server
+            group <- input$indGroup
+
+            #mapping <- getCompleteMapping(server, group, debug)
+            mapping <- as.data.frame(getKPIs(
+                connectionString(Server = paste("aworks300", server, sep = "\\"), Database = "LH_Indicators"),
+                kpiMapping(group)
+            ))
             if(debug){
-                  log_event("Finish getLabels")
-              }
-            title
-          })
-
-          getChildLabels <- reactive({
-              if(debug){
-                  log_event("Start getChildLabels")
-              }
-            if (is.null(input$childKPI) ) {
-                if(debug){
-                  log_event(paste("getChildLabels KPI", input$childKPI, sep = ": "))
-              }
-              return(NULL)
+                log_event("Start childKPIs")
             }
-            sql <- kpiDetails(input$childKPI, input$indGroup)
-            cs <- connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators")
-            labels <- getKPIs(cs, sql)
-            title <- ""
-            if (is.na(labels$group_field_1) || labels$group_field_1 == "NA") {
-              title <- paste(
-                    labels$ind_group_cd,
-                    "Authority Wide",
-                    sep = ": ")
-            }
-            else if (is.na(labels$group_field_2) || labels$group_field_2 == "NA") {
-              title <- paste(
-                    labels$ind_group_cd,
-                    paste(
-                            labels$group_field_1,
-                            labels$group_value_1,
-                            sep = ": "),
-                    sep = ", ")
-            }
-            else if (is.na(labels$group_field_3) || labels$group_field_3 == "NA") {
-              title <- paste(
-                    labels$ind_group_cd,
-                    paste(
-                            labels$group_field_1,
-                            labels$group_value_1,
-                            sep = ": "),
-                    paste(
-                            labels$group_field_2,
-                            labels$group_value_2,
-                            sep = ": "),
-                    sep = ", ")
-            }
-            else if (is.na(labels$group_field_4) || labels$group_field_4 == "NA") {
-              title <- paste(
-                    labels$ind_group_cd,
-                    paste(
-                            labels$group_field_1,
-                            labels$group_value_1,
-                            sep = ": "),
-                    paste(
-                            labels$group_field_2,
-                            labels$group_value_2,
-                            sep = ": "),
-                    paste(
-                            labels$group_field_3,
-                            labels$group_value_3,
-                            sep = ": "),
-                    sep = ", ")
-            }
-            else {
-              title <- paste(
-                    labels$ind_group_cd,
-                    paste(
-                            labels$group_field_1,
-                            labels$group_value_1,
-                            sep = ": "),
-                    paste(
-                            labels$group_field_2,
-                            labels$group_value_2,
-                            sep = ": "),
-                    paste(
-                            labels$group_field_3,
-                            labels$group_value_3,
-                            sep = ": "),
-                    paste(
-                            labels$group_field_4,
-                            labels$group_value_4,
-                            sep = ": "),
-                    sep = ", ")
-            }
-            if(debug){
-                  log_event("Finish getChildLabels")
-              }
-            title
-          })
-
-
-          # Display available child KPIs based off current selection
-          output$childKPIs <- renderUI({
-              if(debug){
-                  log_event("Start childKPIs")
-              }
-            mapping <- getMapping()
             if(is.null(mapping)){
-               if(debug){
-                  log_event("childKPIs call to mapping returned NULL")
-              } 
-              return(NULL)
-            }
-            if(is.null(input$server) || is.null(input$KPI)){
                 if(debug){
-                    log_event(paste("childKPIs server", input$server, "KPI", input$KPI, sep = ": "))
+                    log_event("childKPIs call to mapping returned NULL")
+                } 
+                return(NULL)
+            }
+            if(is.null(server) || is.null(kpi)){
+                if(debug){
+                    log_event(paste("childKPIs server", server, "KPI", kpi, sep = ": "))
                 }
                 return(NULL)
             }
-            children <- mapping %>%
-                        filter(mapping$kpi == input$KPI)
+            children <- mapping[ mapping$kpi == kpi, ]
             if (all(is.na(children$child_group_value_2))) {
-              if(debug){
-                  log_event("Return childKPIs 1")
-              }
-              return(selectizeInput("childKPI",
+                if(debug){
+                    log_event("Return childKPIs 1")
+                }
+                return(selectizeInput(inputId,
                                         "Child KPIs:",
                                         choices = setNames(as.list( children$child_kpi), paste( children$child_group_field_1, children$child_group_value_1, sep = ": "))
                                     )
@@ -632,9 +309,9 @@ dashboard <- function(debug = FALSE) {
             }
             if (all(is.na(children$child_group_value_3))) {
                 if(debug){
-                  log_event("Return childKPIs 2")
-              }
-              return(selectizeInput("childKPI",
+                    log_event("Return childKPIs 2")
+                }
+                return(selectizeInput(inputId,
                                         "Child KPIs:",
                                         choices = setNames(as.list(children$child_kpi), paste(children$child_group_field_2, children$child_group_value_2, sep = ": "))
                                     )
@@ -642,611 +319,363 @@ dashboard <- function(debug = FALSE) {
             }
             if (all(is.na(children$child_group_value_4))) {
                 if(debug){
-                  log_event("Return childKPIs 3")
-              }
-              return(selectizeInput("childKPI",
+                    log_event("Return childKPIs 3")
+                }
+                return(selectizeInput(inputId,
                                         "Child KPIs:",
                                         choices = setNames(as.list(children$child_kpi), paste( children$child_group_field_3, children$child_group_value_3, sep = ": "))
                                     )
                         )
             }
             if(debug){
-                  log_event("Return childKPIs 4")
-              }
-            return(selectizeInput("childKPI",
+                    log_event("Return childKPIs 4")
+            }
+            return(selectizeInput(inputId,
                                         "Child KPIs:",
                                         choices = setNames(as.list(children$child_kpi), paste( children$child_group_field_4, children$child_group_value_4, sep = ": "))
                                     )
                         )
-          })
+        })
 
-          getChildKPI <- reactive({
-              if(debug){
-                  log_event("Start getChildKPI")
-              }
-              if(is.null(input$server) || is.null(input$childKPI)){
-                    if(debug){
-                       log_event(paste("getChildKPI server",input$server,"childKPI", input$childKPI, sep = ": "))
-                    }   
-                  return(NULL)
-              }
-            mapping <- getMapping()
-            if(is.null(mapping)){
-               if(debug){
-                  log_event("getChildKPI call to mapping returned NULL")
-              } 
-              return(NULL)
-            }
-            currentKPI <- mapping %>%
-                        filter(mapping$kpi == input$childKPI)
-            childKPI <- unique(currentKPI$kpi)
-            if(debug){
-                  log_event("Finish getChildKPI")
-              }
-              childKPI
-          })
+        getChildKPI <- reactive({
+            childKPI <- getChildIndicator(debug, input$childKPI, input$server, getMapping())
+            childKPI
+        })
 
-          getParentKPI <- reactive({
-              if(debug){
-                  log_event("Start getParentKPI")
-              }
-              if(is.null(input$server) || is.null(input$KPI)){
-                  if(debug){
-                       log_event(paste("getParentKPI server",input$server,"KPI", input$KPI, sep = ": "))
-                    }   
-                  return(NULL)
-              }
-            mapping <- getMapping()
-            if(is.null(mapping)){
-               if(debug){
-                  log_event("getParentKPI call to mapping returned NULL")
-              } 
-              return(NULL)
-            }
-            currentKPI <- mapping %>%
-                        filter(mapping$kpi == input$KPI)
-            parentKPI <- unique(currentKPI$parent_kpi)
-            if(debug){
-                  log_event("Finish getParentKPI")
-              }
+        getParentKPI <- reactive({
+            parentKPI <- getParentIndicator(debug, input$KPI, input$server, getMapping())
             parentKPI
-          })
+        })
 
-          output$childKPI <- renderText({
-              if(debug){
-                  log_event("Start childKPI")
-              }
-              
-              if(is.null(input$server)){
-                  return(NULL)
-              }
-            kpi <- getChildKPI()
-            if(is.null(kpi)){
-               if(debug){
-                  log_event("childKPI call to getChildKPI returned NULL")
-              } 
-              return(NULL)
+        getProblemKPIs <- eventReactive(input$anomalies,{ 
+            table <- statisticalAnomalies( debug, getKeyMapping(), input$date_range[1], input$date_range[2], input$indGroup, input$indValue, input$server)
+            table
+        })
+
+        getStatDT <- reactive({
+            spk <- getAllKPITrends()
+            diff <- getProblemKPIs()
+            if(is.null(spk) || is.null(diff)){
+                return(NULL)
             }
-            if(debug){
-                  log_event("Finish childKPI")
-            }
-            kpi <- paste("Child KPI: ", kpi, sep = "")
-            kpi
-          })
-
-          output$parentKPI <- renderText({
-              if(debug){
-                  log_event("Start parentKPI")
-              }
-              if(is.null(input$server)){
-                  return(NULL)
-              }
-            kpi <- getParentKPI()
-            if(is.null(kpi)){
-               if(debug){
-                  log_event("parentKPI call to getParentKPI returned NULL")
-              } 
-              return(NULL)
-            }
-            if(debug){
-                  log_event("Finish parentKPI")
-            }
-            kpi <- paste("Parent KPI: ", kpi, sep = "")
-          })
-
-    
-          getProblemKPIs <- eventReactive(input$anomalies,{ 
-                kpi_ind_ids <- getKeyMapping()
-                ind_ids <- cbind(unique(kpi_ind_ids$kpi))
-                date_range <- as.data.frame(seq(as.Date(input$date_range[1]), as.Date(input$date_range[2]), "days"))
-                names(date_range) <- c("Date")
-
-                anomaly.counts <- data.frame(matrix(ncol = 2, nrow = 0))
-                names(anomaly.counts) <- c('ind_id', 'anomalies')
-                for (i in 1:length(ind_ids)) {
-                    sql <- kpiQuery(ind_ids[[i]], input$date_range[1], input$date_range[2], input$indGroup, input$indValue)
-                    cs <- connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators")
-                    df <- as_data_frame(kpiTable(cs, sql))
-
-                    if (nrow(df) < 10) {
-                        next
-                    }
-                    df <- left_join(date_range, df)
-                    df$ind_id <- ind_ids[[i]]
-                    df[is.na(df)] <- 0
-                    df <- as_data_frame(df)
-
-                    result <- tryCatch({
-                        anomalies <- df %>%
-                                    time_decompose(ind_value, method = "twitter", trend = "3 months") %>%
-                                    anomalize(remainder, method = "gesd") %>%
-                                    time_recompose()
-                        }, error = function(e) {
-                            NULL
-                        }, finally = {
-                            NULL
-                        })
-                    if( !is.null(result)){
-                        anomaly.counts[i,] <- list(ind_ids[[i]], sum(anomalies$anomaly == 'Yes'))
-                    }
-                }
-                sql <- kpiDetailsAll(input$indGroup)
-                cs <- connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators")
-                labels <- getKPIs(cs, sql)
-                qa_table <- inner_join(anomaly.counts[order(-anomaly.counts$anomalies),], labels)
-          })
-
-          output$problemKPIs <- renderDT(
-                getProblemKPIs(), 
-                selection = list(target = 'cell'), 
-                server = FALSE,
+            df <- inner_join( spk, diff)
+            d1 <- datatable(
+                df, 
+                selection = list(
+                    mode ="single",
+                    target = "cell"
+                    ), 
+                rownames= FALSE,
+                escape = FALSE,
                 filter = list( 
                     position = 'top', 
-                    clear = FALSE),
+                    clear = FALSE
+                    ),
                 options = list(
+                    columnDefs = list(
+                        list( 
+                            className = 'dt-center',
+                            targets = c(1:11)
+                        )),
                     search = list(
                         regex = TRUE, 
                         caseInsensitive = FALSE
-                    )
+                    ),
+                    fnDrawCallback = htmlwidgets::JS(
+                    'function(){
+                        HTMLWidgets.staticRender();
+                    }')
                 )
             )
+            d1$dependencies <- append(d1$dependencies, htmlwidgets:::getDependency("sparkline"))
+            d1
+        })
 
+        output$problemKPIs <- renderDT(
+            getStatDT()
+        )
 
-
-          # Anomaly Trends
-          getTrendAnomaly <- reactive({
-              if(debug){
-                  log_event("Start getTrendAnomaly")
-              }
-              if(is.null(input$server) || is.null(input$KPI)){
-                  if(debug){
-                    log_event(paste("getTrendAnomaly server", input$server, "KPI", input$KPI, sep = ": "))
-                }
+        getPeriodCompKPIs <- eventReactive(input$periodComp,{ 
+            table <- periodDifferencePercentages(debug, getKeyMapping(), input$date_range[1], input$date_range[2], input$indGroup, input$indValue, input$server)
+            table
+        })
+        getPeriodCompDT <- reactive({
+            spk <- getAllKPITrends()
+            diff <- getPeriodCompKPIs()
+            if(is.null(spk) || is.null(diff)){
                 return(NULL)
-              }
-            sql <- kpiQuery(input$KPI, input$date_range[1], input$date_range[2], input$indGroup, input$indValue)
+            }
+            df <- inner_join( spk, diff)
+            d1 <- datatable(
+                df, 
+                selection = list(
+                    mode ="single",
+                    target = "cell"
+                    ), 
+                rownames= FALSE,
+                escape = FALSE,
+                filter = list( 
+                    position = 'top', 
+                    clear = FALSE
+                    ),
+                options = list(
+                    columnDefs = list(
+                        list( 
+                            className = 'dt-center',
+                            targets = c(1:11)
+                        )),
+                    search = list(
+                        regex = TRUE, 
+                        caseInsensitive = FALSE
+                    ),
+                    fnDrawCallback = htmlwidgets::JS(
+                    'function(){
+                        HTMLWidgets.staticRender();
+                    }')
+                )
+            )
+            d1$dependencies <- append(d1$dependencies, htmlwidgets:::getDependency("sparkline"))
+            d1
+        })
+
+        output$periodCompDT <- renderDT(
+            getPeriodCompDT()
+        )
+
+        observeEvent(input$problemKPIs_cell_clicked, {
+            kpi <- input$problemKPIs_cell_clicked$value
+            if( is.null(kpi) || is.na(kpi) || !is.numeric(kpi) || input$problemKPIs_cell_clicked$col != 0){
+                return(NULL)
+            }
+            updateSelectizeInput(session, "KPI", selected = kpi)
+        })
+
+        getDifferenceKPIs <- eventReactive(input$differences,{ 
+            table <- differencePercentages(debug, getKeyMapping(), input$date_range[1], input$date_range[2], input$indGroup, input$indValue, input$server)
+            table
+        })
+
+        getAllKPITrends <- reactive({
+            sql <- kpiQueryAll(input$date_range[1], input$date_range[2], input$indGroup, input$indValue)
             cs <- connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators")
-            kpiTable <- kpiTable(cs, sql)
-            
+            kpiData <- getKPIs(cs, sql)
+            if(is.null(kpiData)){
+                return(NULL)
+            }
+            allKPIS <- kpiData %>%
+                group_by(ind_id) %>%
+                summarize(
+                    TrendSparkline = spk_chr(
+                    ind_value, type ="line",
+                    chartRangeMin = 0, chartRangeMax = max(ind_value)
+                )
+            )
+            allKPIS
+        })
 
-            # padd zero days
-            date_range <- as.data.frame(seq(as.Date(input$date_range[1]), as.Date(input$date_range[2]), "days"))
-            names(date_range) <- c("Date")
-            kpiTable <- left_join(date_range, kpiTable)
-            kpiTable[ is.na(kpiTable)] <- 0
-            kpiTable[3] <- input$KPI
+        getDiffDT <- reactive({
+            spk <- getAllKPITrends()
+            diff <- getDifferenceKPIs()
+            if(is.null(spk) || is.null(diff)){
+                return(NULL)
+            }
+            df <- inner_join(  spk, diff)
+            d1 <- datatable(
+                df, 
+                selection = list(
+                    mode ="single",
+                    target = "cell"
+                    ), 
+                rownames= FALSE,
+                escape = FALSE,
+                filter = list( 
+                    position = 'top', 
+                    clear = FALSE
+                    ),
+                options = list(
+                    columnDefs = list(
+                        list( 
+                            className = 'dt-center',
+                            targets = c(1:11)
+                        )),
+                    search = list(
+                        regex = TRUE, 
+                        caseInsensitive = FALSE
+                    ),
+                    fnDrawCallback = htmlwidgets::JS(
+                    'function(){
+                        HTMLWidgets.staticRender();
+                    }')
+                )
+            )
+            d1$dependencies <- append(d1$dependencies, htmlwidgets:::getDependency("sparkline"))
+            d1
+        })
 
-            sql <- kpiQuery(input$KPI, input$date_range[1], input$date_range[2], input$indGroup, input$indValue)
-            cs <- connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators")
-            df <- kpiTable(cs, sql)
-            df <- left_join(date_range, df)
+        output$differenceKPIs <- renderDT(
+            getDiffDT()
+        )
 
-            df[is.na(df)] <- 0
-            df[3] <- input$KPI
-            df <- as_data_frame(df)
+        observeEvent(input$differenceKPIs_cell_clicked, {
+            kpi <- input$differenceKPIs_cell_clicked$value
+            if( is.null(kpi) || is.na(kpi) || !is.numeric(kpi) || input$differenceKPIs_cell_clicked$col != 0){
+                return(NULL)
+            }
+            updateSelectizeInput(session, "KPI", selected = kpi)
+        })
 
+        observeEvent(input$periodCompDT_cell_clicked, {
+            kpi <- input$periodCompDT_cell_clicked$value
+            if( is.null(kpi) || is.na(kpi) || !is.numeric(kpi) || input$periodCompDT_cell_clicked$col != 0){
+                return(NULL)
+            }
+            updateSelectizeInput(session, "KPI", selected = kpi)
+        })
 
-            anomalies <- df %>%
-                    time_decompose(ind_value, method = "twitter", trend = "3 months") %>%
-                    anomalize(remainder, method = "gesd") %>%
-                    time_recompose()
-            kpiTable <- left_join(kpiTable, anomalies)
-            if(debug){
-                  log_event("Finish getTrendAnomaly")
-              }
-            kpiTable
-          })
+        observeEvent(input$problemKPIs_cell_clicked, {
+            kpi <- input$problemKPIs_cell_clicked$value
+            if( is.null(kpi) || is.na(kpi) || !is.numeric(kpi) || input$problemKPIs_cell_clicked$col != 0){
+                return(NULL)
+            }
+            updateSelectizeInput(session, "KPI", selected = kpi)
+        })
 
-          getTrendChildAnomaly <- reactive({
-              if(debug){
-                  log_event("Start getTrendChildAnomaly")
-              }
-              if(is.null(input$server) || is.null(input$KPI)){
-                  if(debug){
-                    log_event(paste("getTrendChildAnomaly server", input$server, "KPI", input$KPI, sep = ": "))
-                }
-                  return(NULL)
-              }
-              sql <- kpiQuery(input$childKPI, input$date_range[1], input$date_range[2], input$indGroup, input$indValue)
-              cs <- connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators")
-              kpiTable <- kpiTable(cs, sql)
+        getTrendAnomaly <- reactive({
+            table <- trendAnomalySeries(debug, input$date_range[1], input$date_range[2], input$KPI, input$indValue, input$indGroup, input$server)
+            table
+        })
 
-              # padd zero days
-                date_range <- as.data.frame(seq(as.Date(input$date_range[1]), as.Date(input$date_range[2]), "days"))
-                names(date_range) <- c("Date")
-                kpiTable <- left_join(date_range, kpiTable)
-                kpiTable[ is.na(kpiTable)] <- 0
-                kpiTable[3] <- input$childKPI
+        getTrendChildAnomaly <- reactive({
+            table <- trendAnomalySeries(debug, input$date_range[1], input$date_range[2], input$KPI, input$indValue, input$indGroup, input$server)
+            table
+        })
 
-              sql <- kpiQuery(input$childKPI, input$date_range[1], input$date_range[2], input$indGroup, input$indValue)
-              cs <- connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators")
-              df <- kpiTable(cs, sql)
-              
-              df <- left_join(date_range, df)            
-              df[is.na(df)] <- 0
-              df[3] <- input$KPI
-              df <- as_data_frame(df)
+        output$trend <- renderPlotly({
+            df <- getTrendAnomaly()
+            label <- getLabels()
+            trend(debug, df, label)
+        })
 
+        output$trendChild <- renderPlotly({
+            df <- getTrendChildAnomaly()
+            label <- getChildLabels()
+            trend(debug, df, label)
+        })
 
-              anomalies <- df %>%
-                    time_decompose(ind_value, method = "twitter", trend = "3 months") %>%
-                    anomalize(remainder, method = "gesd") %>%
-                    time_recompose()
-              kpiTable <- left_join(kpiTable, anomalies)
-              if(debug){
-                  log_event("Finish getTrendChildAnomaly")
-              }
-              kpiTable
-          })
-
-
-          output$trend <- renderPlotly({
-              df <- getTrendAnomaly()
-              if(is.null(df)){
-                  if(debug){
-                      log_event("trend call to getTrendAnomaly returned NULL")
-                  }
-                  return(NULL)
-              }
-              label <- getLabels()
-              if(is.null(label)){
-                  if(debug){
-                      log_event("trend call to getLabels returned NULL")
-                  }
-                  return(NULL)
-              }
-              p <- plot_ly(
-                        df,
-                        x = ~Date,
-                        y = ~ind_value,
-                        name = "Current Value",
-                        symbol = ~anomaly,
-                        symbols = c('circle', 'x'),
-                        colors = c('red', 'gray'),
-                        type = 'scatter',
-                        mode = 'markers',
-                        source = "subset"
-                    ) %>%
-                    layout(
-                        title = label,
-                        xaxis = list(title = 'Date'),
-                        yaxis = list(title = 'Value',
-                        rangemode = "tozero")
-                    )
-              p
-              mytext = paste("Current Value = ", df$ind_value, sep = "")
-              pp = plotly_build(p)
-              style(pp, text = mytext, hoverinfo = "text", traces = c(1, 1))
-            
-          })
-
-          output$trendChild <- renderPlotly({
-              df <- getTrendChildAnomaly()
-              if(is.null(df)){
-                  if(debug){
-                      log_event("trend call to getTrendChildAnomaly returned NULL")
-                  }
-                  return(NULL)
-              }
-              label <- getChildLabels()
-              if(is.null(label)){
-                  if(debug){
-                      log_event("trend call to getChildLabels returned NULL")
-                  }
-                  return(NULL)
-              }
-              p <- plot_ly(
-                        df,
-                        x = ~Date,
-                        y = ~ind_value,
-                        name = "Current Value",
-                        symbol = ~anomaly,
-                        symbols = c('circle', 'x'),
-                        colors = c('red', 'gray'),
-                        type = 'scatter',
-                        mode = 'markers',
-                        source = "subset"
-                    ) %>%
-                    layout(
-                        title = label,
-                        xaxis = list(title = 'Date'),
-                        yaxis = list(title = 'Value',
-                        rangemode = "tozero")
-                    )
-              p
-              mytext = paste("Current Value = ", df$ind_value, sep = "")
-              pp = plotly_build(p)
-              style(pp, text = mytext, hoverinfo = "text", traces = c(1, 1))
-            
-          })
-
-
-          # Year over year series comparison
-
-          getTrend <- reactive({
+        getTrend <- reactive({
             sql <- kpiPeriodComparisionTrend(input$KPI, input$date_range[1], input$date_range[2], input$indGroup, input$indValue)
             cs <- connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators")
             kpiTable <- kpiTable(cs, sql)
             kpiTable
-            # padd zero days
-            #date_range <- as.data.frame(seq(as.Date(input$date_range[1]), as.Date(input$date_range[2]), "days"))
-            #names(date_range) <- c("Date")
-            #kpiTable <- left_join(date_range, kpiTable)
-            #kpiTable[ is.na(kpiTable)] <- 0
-            #kpiTable[4] <- input$KPI
-          })
+        })
 
-          getTrendChild <- reactive({
+        getTrendChild <- reactive({
             sql <- kpiPeriodComparisionTrend(input$childKPI, input$date_range[1], input$date_range[2], input$indGroup, input$indValue)
             cs <- connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators")
             kpiTable <- kpiTable(cs, sql)
             kpiTable
+        })
 
-            # padd zero days
-            #date_range <- as.data.frame(seq(as.Date(input$date_range[1]), as.Date(input$date_range[2]), "days"))
-            #names(date_range) <- c("Date")
-            #kpiTable <- left_join(date_range, kpiTable)
-            #kpiTable[ is.na(kpiTable)] <- 0
-            #kpiTable[4] <- input$childKPI
-          })
-
-
-          output$interactiveTrend <- renderPlotly({
+        output$interactiveTrend <- renderPlotly({
             label <- getLabels()
             df <- getTrend()
-            p <- plot_ly(
-                        df,
-                        x = ~Date,
-                        y = ~series_1,
-                        name = "Current Value",
-                        type = 'scatter',
-                        mode = 'lines+markers',
-                        source = "subset"
-                    ) %>%
-                    add_trace(
-                        y = ~series_2,
-                        name = 'Previous Year value',
-                        mode = 'lines+markers'
-                    ) %>%
-                    layout(
-                        title = label,
-                        xaxis = list(title = 'Date'),
-                        yaxis = list(title = 'Value',
-                        rangemode = "tozero")
-                    )
-            p
-            mytext = paste("Current Value = ", df$series_1, "\n", "Previous Year Value = ", df$series_2, "\n", sep = "")
-            pp = plotly_build(p)
-            style(pp, text = mytext, hoverinfo = "text", traces = c(1, 2, 3))
-          })
+            plot <- ggplotly(interactiveTrend(debug, df, label))
+        })
 
-          output$interactiveTrendChild <- renderPlotly({
-              label <- getChildLabels()
-              df <- getTrendChild()
-              p <- plot_ly(
-                        df,
-                        x = ~Date,
-                        y = ~series_1,
-                        name = "Current Value",
-                        type = 'scatter',
-                        mode = 'lines+markers',
-                        source = "subset"
-                    ) %>%
-                    add_trace(
-                        y = ~series_2,
-                        name = 'Previous Year value',
-                        mode = 'lines+markers'
-                    ) %>%
-                    layout(
-                        title = label,
-                        xaxis = list(title = 'Date'),
-                        yaxis = list(title = 'Value',
-                        rangemode = "tozero")
-                    )
-              p
-              mytext = paste("Current Value = ", df$series_1, "\n", "Previous Year Value = ", df$series_2, "\n", sep = "")
-              pp = plotly_build(p)
-              style(pp, text = mytext, hoverinfo = "text", traces = c(1, 2, 3))
-            
-          })
+        output$interactiveTrendChild <- renderPlotly({
+            label <- getChildLabels()
+            df <- getTrendChild()
+            plot <- ggplotly(interactiveTrend(debug, df, label))
+        })
 
-          output$interactiveTable <- renderText({
+        output$interactiveTable <- renderText({
             event.data <- event_data("plotly_selected", source = "subset")
-
-            # If NULL dont do anything
             if (is.null(event.data) == T) return(NULL)
             stats <- subset(plot.df)[subset(event.data)$series_1]
             summary(stats)
-
-          })
-
+        })
 
         getTrendComp <- reactive({
             sql <- kpiPeriodComparision(input$KPI, input$date_range[1], input$date_range[2], input$indGroup, input$indValue)
             cs <- connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators")
             kpiTable <- kpiTable(cs, sql)
             kpiTable
-          })
+        })
 
-          getTrendChildComp <- reactive({
+        getTrendChildComp <- reactive({
             sql <- kpiPeriodComparision(input$childKPI, input$date_range[1], input$date_range[2], input$indGroup, input$indValue)
             cs <- connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators")
             kpiTable <- kpiTable(cs, sql)
             kpiTable
-          })
+        })
 
           # Year over year comparison with different plotly style
-          output$interactiveAggregate <- renderPlotly({
+        output$interactiveAggregate <- renderPlotly({
             df <- getTrendComp()
+            label <- getLabels()
+            comparisionTrend(debug, df , label)
+        })
 
-            p <- df %>%
-                plot_ly(
-                    x = ~Date,
-                    y = ~series_1,
-                    type = "scatter",
-                    mode = 'lines',
-                    fill = 'tozeroy',
-                    name = "Current KPIs"
-                ) %>%
-                add_trace(
-                    y = ~df$series_2,
-                    name = 'Previous KPIs',
-                    mode = 'lines',
-                    fill = 'tozeroy'
-                ) %>%
-                layout(
-                    title = "<b>Aggregate Data</b><br>test phase",
-                    xaxis = list(
-                        type = 'date'
-                    ),
-                    yaxis = list(
-                        title = "Volumes",
-                        rangemode = "tozero"
-                    )
-                )
-          })
-
-          output$interactiveAggregateChild <- renderPlotly({
-
+        output$interactiveAggregateChild <- renderPlotly({
             df <- getTrendChildComp()
+            label <- getChildLabels()
+            comparisionTrend(debug, df , label)
+        })
 
-            p <- df %>%
-                plot_ly(
-                    x = ~Date,
-                    y = ~series_1,
-                    type = "scatter",
-                    mode = 'lines',
-                    fill = 'tozeroy',
-                    name = "Current KPIs"
-                ) %>%
-                add_trace(
-                    y = ~df$series_2,
-                    name = 'Previous KPIs',
-                    mode = 'lines',
-                    fill = 'tozeroy'
-                ) %>%
-                layout(
-                    title = "<b>Aggregate Data</b><br>test phase",
-                    xaxis = list(
-                        type = 'date'
-                    ),
-                    yaxis = list(
-                        title = "Volumes",
-                        rangemode = "tozero"
-                    )
-                )
-          })
-
-          output$kpiPrediction <- renderPlotly({
-              trainSQL <- kpiTrainData(input$KPI, input$date_range[1], input$date_range[2])
-              cs <- connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators")
-              train <- getKPIs(cs, trainSQL)
-
-              testSQL <- kpiTestData(input$KPI, input$date_range[1], input$date_range[2])
-              cs <- connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators")
-              test <- getKPIs(cs, testSQL)
-
-              prediction <- xgboostPrediction(train, test)
-              err <- prediction$err
-              pred <- prediction$pred
-              test$prediction <- pred
-
-              p <- test %>%
-                plot_ly(
-                    x = ~Date,
-                    y = ~ind_value_1,
-                    type = "scatter",
-                    mode = 'lines',
-                    fill = 'tozeroy',
-                    name = "Current Values"
-                ) %>%
-                add_trace(
-                    y = ~prediction,
-                    name = 'Predicted Values',
-                    mode = 'lines',
-                    fill = 'tozeroy'
-                ) %>%          
-                layout(
-                    title = "<b>Predicted Data</b><br>test phase",
-                    xaxis = list(
-                        type = 'date'
-                    ),
-                    yaxis = list(
-                        title = "Volumes",
-                        rangemode = "tozero"
-                    )
-                )   
-          })
+        output$kpiPrediction <- renderPlotly({
+            predictionTrend(debug, input$KPI, input$date_range[1], input$date_range[2], input$server)
+        })
 
         getPredictedKPIs <- eventReactive(input$anomalies,{ 
-                kpi_ind_ids <- getKeyMapping()
-                ind_ids <- cbind(unique(kpi_ind_ids$kpi))
-                date_range <- as.data.frame(seq(as.Date(input$date_range[1]), as.Date(input$date_range[2]), "days"))
-                names(date_range) <- c("Date")
+            table <- predictedDifferences(debug, getKeyMapping(), input$date_range[1], input$date_range[2], input$indGroup, input$indValue, input$server)
+            table
+        })
 
-                anomaly.error <- data.frame(matrix(ncol = 2, nrow = 0))
-                names(anomaly.error) <- c('ind_id', 'error')
-                for (i in 1:length(ind_ids)) {
-                    trainSQL <- kpiTrainData(input$KPI, input$date_range[1], input$date_range[2])
-                    cs <- connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators")
-                    train <- getKPIs(cs, trainSQL)
+        output$problemPredictionsKPIs <- renderDT(
+            getPredictedKPIs(), 
+            selection = list(target = 'cell'), 
+            server = FALSE,
+            filter = list( 
+                position = 'top', 
+                clear = FALSE),
+            options = list(
+                search = list(
+                    regex = TRUE, 
+                    caseInsensitive = FALSE
+                ))
+        )
 
-                    testSQL <- kpiTestData(input$KPI, input$date_range[1], input$date_range[2])
-                    cs <- connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators")
-                    test <- getKPIs(cs, testSQL)
+        observeEvent( input$email, {
+            log_event("Start email")
+            df <- as.data.frame( getDifferenceKPIs())
 
-                    result <- tryCatch({
-                        prediction <- xgboostPrediction(train, test)
-                        }, error = function(e) {
-                            NULL
-                        }, finally = {
-                            NULL
-                        })
-                    if( !is.null(result)){
-                        err <- prediction$err
-                        anomaly.error[i,] <- list(ind_ids[[i]], err)
-                    }
-                }
-                sql <- kpiDetailsAll(input$indGroup)
-                cs <- connectionString(Server = paste("aworks300", input$server, sep = "\\"), Database = "LH_Indicators")
-                labels <- getKPIs(cs, sql)
-                qa_table <- inner_join(anomaly.error[order(-anomaly.error$error),], labels)
-          })
+            html <- convertToHTML(df, server = getServer(), group = getGrouping(), value = getVal(), start = getStartDt(), end = getEndDt())
+            emailHTML(body = html)
+            log_event("Email Sent")
+        })
 
-          output$problemPredictionsKPIs <- renderDT(
-                getPredictedKPIs(), 
-                selection = list(target = 'cell'), 
-                server = FALSE,
-                filter = list( 
-                    position = 'top', 
-                    clear = FALSE),
-                options = list(
-                    search = list(
-                        regex = TRUE, 
-                        caseInsensitive = FALSE
-                    )
-                )
-            )
+        onBookmark(function(state){
+            state$values$server <- getServer()
+            state$values$KPI <- getKPI()
+            state$values$date_range_start <- getStartDt()
+            state$values$date_range_end <- getEndDt()
+            state$values$indGroup <- getGrouping()
+            state$values$indValue <- getVal()
+        })
+        onRestore(function(state){
+            req(input$server, input$date_range)
+            updateSelectizeInput(session, "server", selected = state$values$server)
+            updateDateRangeInput(session, "date_range", start = state$values$date_range_start)
+            updateDateRangeInput(session, "date_range", end = state$values$date_range_end)
+        
+            req(input$indGroup, input$indValue)
+            updateSelectizeInput(session, "indGroup", selected = state$values$indGroup)
+            updateSelectizeInput(session, "indValue", selected = state$values$indValue)
+        
+            req(input$KPI)
+            updateSelectizeInput(session, "KPI", selected = state$values$KPI)
+        })
+        #setBookmarkExclude("KPI")
         }
     )
 }

@@ -13,7 +13,7 @@ scaled_err <- function(x) {
 # the feature to predict is in the first column
 # the rest are the training data
 # returns the predicted output as well as the average error off the predicted value
-xgboostPrediction <- function(train, test){        
+xgboostPrediction <- function(train, test){
     train <- as.matrix(train)
     test <- as.matrix(test)
     train.label <- train[,1]

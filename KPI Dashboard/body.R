@@ -4,10 +4,48 @@ require(dplyr)
 
 getBody <- function() {
   body <- dashboardBody(
+        getBoxs(),
         getTabItems(),
-        DTOutput("problemKPIs")
+        getTableTabs()
     )
   body
+}
+
+
+getBoxs <- function(){
+    boxes <- div(fluidRow(
+            valueBoxOutput("currentLastAssemble"),
+            valueBoxOutput("currentAverageBox"),
+            valueBoxOutput("currentPercBox")
+        ),
+        fluidRow(
+            valueBoxOutput("childLastAssemble"),
+            valueBoxOutput("childAverageBox"),
+            valueBoxOutput("childPercBox")
+        ))
+}
+
+getTableTabs <- function(){
+    tableItems <- tabItem(
+                    tabName = "period_comparison_trend",
+                    tabBox(
+                        title = "KPI Analysis",
+                        id = "stat_table",
+                        width = "100%",
+                        tabPanel(
+                            "Statistical Comparison",
+                            DTOutput("problemKPIs")
+                        ),
+                        tabPanel(
+                            "Difference Comparison",
+                            DTOutput("differenceKPIs")
+                        ),
+                        tabPanel(
+                            "Year over year Comparison",
+                            DTOutput("periodCompDT")
+                        )
+                    )
+        )
 }
 
 getTabItems <- function() {
