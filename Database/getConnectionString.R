@@ -31,11 +31,6 @@ kpiMap <- function(cs, sql) {
 }
 
 getKPIs <- function(cs, sql) {
-    if(is.null(sql)){
-        warning("Attempt to query with NULL SQL")
-        odbcClose(cs)
-        return(NULL)
-    }
     kpiTable <- tryCatch({
             sqlQuery(cs, sql)
             }, error = function(e) {

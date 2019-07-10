@@ -3,18 +3,15 @@ getChartLabels <- function(kpi, server, group, debug){
             log_event("Start getChartLabels in labels.R")
     }
 
-    if (is.null(kpi) || is.null(group) || is.null(server)){
-        return(NULL)
-    }
-
     sql <- kpiDetails(kpi , group)
     cs <- connectionString(Server = paste("aworks300", server, sep = "\\"), Database = "LH_Indicators")
     labels <- getKPIs(cs, sql)
     title <- ""
-    
-    if(is.null(labels)){
+
+    if(is.null(labels) || nrow(labels) == 0){
         return(NULL)
     }
+
     if (is.na(labels$group_field_1)) {
         title <- paste(
             labels$ind_group_cd,
@@ -22,64 +19,31 @@ getChartLabels <- function(kpi, server, group, debug){
             sep = ": ")
     }
     else if (is.na(labels$group_field_2)) {
-        title <- paste(
-            labels$ind_group_cd,
-            paste(
-                    labels$group_field_1,
-                    labels$group_value_1,
-                    sep = ": "),
-            sep = ", ")
+        title <- paste0(
+                labels$ind_group_cd, " Selected, Filtered on: ",
+                labels$group_field_1, ": ", labels$group_value_1
+            )
     }
     else if (is.na(labels$group_field_3)) {
-        title <- paste(
-            labels$ind_group_cd,
-            paste(
-                    labels$group_field_1,
-                    labels$group_value_1,
-                    sep = ": "),
-            paste(
-                    labels$group_field_2,
-                    labels$group_value_2,
-                    sep = ": "),
-            sep = ", ")
+        title <- paste0(
+                labels$ind_group_cd, " Selected, Filtered on: ",
+                labels$group_field_1, ": ", labels$group_value_1, " - ",
+                labels$group_field_2, ": ", labels$group_value_2)
     }
     else if (is.na(labels$group_field_4)) {
-        title <- paste(
-            labels$ind_group_cd,
-            paste(
-                    labels$group_field_1,
-                    labels$group_value_1,
-                    sep = ": "),
-            paste(
-                    labels$group_field_2,
-                    labels$group_value_2,
-                    sep = ": "),
-            paste(
-                    labels$group_field_3,
-                    labels$group_value_3,
-                    sep = ": "),
-            sep = ", ")
+        title <- paste0(
+                labels$ind_group_cd, " Selected, Filtered on: ",
+                labels$group_field_1, ": ", labels$group_value_1, " - ",
+                labels$group_field_2, ": ", labels$group_value_2, " - ",
+                labels$group_field_3, ": ", labels$group_value_3)
     }
     else {
-        title <- paste(
-            labels$ind_group_cd,
-            paste(
-                    labels$group_field_1,
-                    labels$group_value_1,
-                    sep = ": "),
-            paste(
-                    labels$group_field_2,
-                    labels$group_value_2,
-                    sep = ": "),
-            paste(
-                    labels$group_field_3,
-                    labels$group_value_3,
-                    sep = ": "),
-            paste(
-                    labels$group_field_4,
-                    labels$group_value_4,
-                    sep = ": "),
-            sep = ", ")
+        title <- paste0(
+                labels$ind_group_cd, " Selected, Filtered on: ",
+                labels$group_field_1, ": ", labels$group_value_1, " - ",
+                labels$group_field_2, ": ", labels$group_value_2, " - ",
+                labels$group_field_3, ": ", labels$group_value_3, " - ",
+                labels$group_field_4, ": ", labels$group_value_4)
     }
     if(debug){
             log_event("Ending getChartLabels in labels.R")

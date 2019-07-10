@@ -30,11 +30,11 @@ trendAnomalySeries <- function(debug, start,end, kpi, kpiValue, kpiGroup, server
     sql <- kpiQuery(kpi, start, end, kpiGroup, kpiValue)
     cs <- connectionString(Server = paste("aworks300", server, sep = "\\"), Database = "LH_Indicators")
     df <- kpiTable(cs, sql)
-    
+
     df <- left_join(date_range, df)
     df[is.na(df)] <- 0
     df[3] <- kpi
-    df <- as_data_frame(df)
+    df <- as_tibble(df)
 
     anomalies <- df %>%
         time_decompose(ind_value, method = "twitter", trend = "3 months") %>%

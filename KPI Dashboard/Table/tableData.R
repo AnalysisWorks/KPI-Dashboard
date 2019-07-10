@@ -11,7 +11,6 @@ statisticalAnomalies <- function(debug, kpiIndIds, start, end, kpiGroup, kpiValu
     anomaly.counts <- data.frame(matrix(ncol = 2, nrow = 0))
     names(anomaly.counts) <- c('ind_id', 'anomalies')
     for (i in 1:length(ind_ids)) {
-    #for (i in 1:10) {
         sql <- kpiQuery(ind_ids[[i]], start, end, kpiGroup, kpiValue)
         cs <- connectionString(Server = paste("aworks300", server, sep = "\\"), Database = "LH_Indicators")
         df <- as_data_frame(kpiTable(cs, sql))
@@ -22,7 +21,7 @@ statisticalAnomalies <- function(debug, kpiIndIds, start, end, kpiGroup, kpiValu
         df <- left_join(date_range, df)
         df$ind_id <- ind_ids[[i]]
         df[is.na(df)] <- 0
-        df <- as_data_frame(df)
+        df <- as_tibble(df)
 
         result <- tryCatch({
             anomalies <- df %>%
@@ -45,7 +44,7 @@ statisticalAnomalies <- function(debug, kpiIndIds, start, end, kpiGroup, kpiValu
     if(debug){
             log_event("End statisticalAnomalies in tableData.R")
     }
-    
+
     qa_table
 }
 
@@ -63,11 +62,10 @@ differencePercentages <- function( debug, kpiIndIds, start, end, kpiGroup, kpiVa
     difference.sum <- data.frame(matrix(ncol = 2, nrow = 0))
     names(difference.sum) <- c('ind_id', 'percent_difference')
     for (i in 1:length(ind_ids)) {
-    #for (i in 1:10) {
         sql <- kpiPeriodComparision(ind_ids[[i]], start, end, kpiGroup, kpiValue)
         cs <- connectionString(Server = paste("aworks300", server, sep = "\\"), Database = "LH_Indicators")
         df <- kpiTable(cs, sql)
-        
+
         if (nrow(df) < 10) {
             next
         }
@@ -75,7 +73,7 @@ differencePercentages <- function( debug, kpiIndIds, start, end, kpiGroup, kpiVa
         df$ind_id <- ind_ids[[i]]
         df[is.na(df)] <- 0
         df <- as_data_frame(df)
-        
+
 
         if( !is.null(df)){
             difference.sum[i,] <- list(ind_ids[[i]], round( (sum(  abs(df$series_1 - df$series_2) / (max(df$series_1, df$series_2 )) ) / period_len), 2  ))
@@ -105,11 +103,10 @@ periodDifferencePercentages <- function( debug, kpiIndIds, start, end, kpiGroup,
     difference.sum <- data.frame(matrix(ncol = 2, nrow = 0))
     names(difference.sum) <- c('ind_id', 'percent_difference')
     for (i in 1:length(ind_ids)) {
-    #for (i in 1:10) {
         sql <- kpiPeriodComparisionTrend(ind_ids[[i]], start, end, kpiGroup, kpiValue)
         cs <- connectionString(Server = paste("aworks300", server, sep = "\\"), Database = "LH_Indicators")
         df <- kpiTable(cs, sql)
-        
+
         if (nrow(df) < 10) {
             next
         }
@@ -117,7 +114,7 @@ periodDifferencePercentages <- function( debug, kpiIndIds, start, end, kpiGroup,
         df$ind_id <- ind_ids[[i]]
         df[is.na(df)] <- 0
         df <- as_data_frame(df)
-        
+
 
         if( !is.null(df)){
             difference.sum[i,] <- list(ind_ids[[i]], round( (sum(  abs(df$series_1 - df$series_2) / (max(df$series_1, df$series_2 )) ) / period_len), 2  ))
@@ -130,48 +127,6 @@ periodDifferencePercentages <- function( debug, kpiIndIds, start, end, kpiGroup,
 
     if(debug){
             log_event("End periodDifferencePercentages in tableData.R")
-    }
-    qa_table
-}
-
-predictedDifferences <- function( debug, kpiIndIds, start, end, kpiGroup, kpiValue, server){
-    if(debug){
-            log_event("Start predictedDifferences in tableData.R")
-    }
-    kpi_ind_ids <- kpiIndIds
-    ind_ids <- cbind(unique(kpi_ind_ids$kpi))
-    date_range <- as.data.frame(seq(as.Date(start), as.Date(end), "days"))
-    names(date_range) <- c("Date")
-
-    anomaly.error <- data.frame(matrix(ncol = 2, nrow = 0))
-    names(anomaly.error) <- c('ind_id', 'error')
-    for (i in 1:length(ind_ids)) {
-        trainSQL <- kpiTrainData(kpi, start, end)
-        cs <- connectionString(Server = paste("aworks300", server, sep = "\\"), Database = "LH_Indicators")
-        train <- getKPIs(cs, trainSQL)
-
-        testSQL <- kpiTestData(kpi, start, end)
-        cs <- connectionString(Server = paste("aworks300", server, sep = "\\"), Database = "LH_Indicators")
-        test <- getKPIs(cs, testSQL)
-
-        result <- tryCatch({
-            prediction <- xgboostPrediction(train, test)
-            }, error = function(e) {
-                NULL
-            }, finally = {
-                NULL
-            })
-        if( !is.null(result)){
-            err <- prediction$err
-            anomaly.error[i,] <- list(ind_ids[[i]], err)
-        }
-    }
-    sql <- kpiDetailsAll(kpiGroup)
-    cs <- connectionString(Server = paste("aworks300", server, sep = "\\"), Database = "LH_Indicators")
-    labels <- getKPIs(cs, sql)
-    qa_table <- inner_join(anomaly.error[order(-anomaly.error$error),], labels)
-    if(debug){
-            log_event("End predictedDifferences in tableData.R")
     }
     qa_table
 }

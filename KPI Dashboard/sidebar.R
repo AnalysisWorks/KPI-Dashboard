@@ -4,47 +4,52 @@ require(dplyr)
 
 getSidebar <- function() {
   sidebar <- dashboardSidebar(
-        getSidebarMenu(),
         selectizeInput(
             "server",
-            label = "Target Server",
+            label = "Current Server",
             choices = c(
+                    "Vancouver Coastal" = "vancouvercoastal",
                     "Island Health" = "islandhealth",
                     "William Osler" = "wohs",
-                    "Vancouver Coastal" = "vancouvercoastal",
                     "Alberta Health" = "AHSEdmontonZone"
                     ),
             options = list(
-                placeholder = 'Please Select a Server'
+                placeholder = 'Client'
             )
         ),
+
         dateRangeInput(
             "date_range",
-            "Date range:",
-            start = "2019-01-01",
-            end = "2019-05-15"
+            label = "Select Date Range",
+            start = "2018-04-01",
+            end = "2019-03-31"
         ),
-        sliderInput(
-            "target_perc",
-            "Percentile Target",
-            min = 0,
-            max = 100,
-            step = 1,
-            value = 75
-        ),
+
         uiOutput("KPIGroups"),
         uiOutput("KPIValues"),
         uiOutput("KPIout"),
-        uiOutput("childKPIs"),
-        
-        actionButton("parent", "Select Parent"),
-        actionButton("child", "Select Child"),
-        actionButton("anomalies", "Calculate Anomalies"),
-        actionButton("differences", "Calculate Differences"),
-        actionButton("periodComp", "Period Differences"),
-        actionButton("email", "Email Findings"),
-        
-        bookmarkButton(),
+        uiOutput("KPIfields"),
+
+        selectizeInput(
+            "chartTabs",
+            label = "Select Desired View",
+            choices = c(
+                    "Statistical Outliers" = "anomaly_detection",
+                    "Trend with Previous Year" = "period_comparison_trend",
+                    "Trend with Previous Cycle" = "period_comparison_interval_trend"
+                    ),
+            options = list(
+                placeholder = 'View'
+            )
+        ),
+        radioButtons(
+            "metric", "Generate Tables (May take a few minutes)",
+            c(
+                "Statistical Anomalies" = "anomalies",
+                "Cycle to Cycle Difference" = "differences",
+                "Year over Year Difference" = "periodComp"
+            )
+        ),
         #button to close window and end the session
         tags$button(
             id = 'close',
@@ -57,34 +62,4 @@ getSidebar <- function() {
   sidebar
 }
 
-# Tab Name must correspond to a tab Item in body.R
-getSidebarMenu <- function() {
-  siderbarMenuItems <- sidebarMenu(
-        id = 'chartTabs',
-        menuItem(
-            "Charting", icon = icon("dashboard"),
-            menuSubItem(
-                "Statistical Outliers",
-                tabName = "anomaly_detection",
-                icon = icon("dashboard")
-            ),
-            menuSubItem(
-                "Trend with Previous Year",
-                tabName = "period_comparison_trend",
-                icon = icon("th")
-            ),
-            menuSubItem(
-                "Trend with Previous Cycle",
-                tabName = "period_comparison_interval_trend",
-                icon = icon("th")
-            ),
-            menuSubItem(
-                "Predict from Previous KPIs",
-                tabName = "prediction_anomalies",
-                icon = icon("th")
-            )
-        )
-    )
-  siderbarMenuItems
-}
 

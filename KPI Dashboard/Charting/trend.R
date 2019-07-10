@@ -1,6 +1,8 @@
 require(plotly)
 require(xgboost)
-trend <- function(debug, df, label){
+
+
+statisticalAnomalyTrend <- function(debug, df, label){
     if(debug){
         log_event("Starting trend in trend.R")
     }
@@ -34,9 +36,9 @@ trend <- function(debug, df, label){
     p
 }
 
-interactiveTrend <- function(debug, df, label){
+yearComparisonTrend <- function(debug, df, label){
     if(debug){
-        log_event("Starting interactiveTrend in trend.R")
+        log_event("Starting yearComparisonTrend in trend.R")
     }
     p <- plot_ly(
                 df,
@@ -62,14 +64,14 @@ interactiveTrend <- function(debug, df, label){
     pp = plotly_build(p)
     style(pp, text = mytext, hoverinfo = "text", traces = c(1, 2, 3))
     if(debug){
-        log_event("Ending interactiveTrend in trend.R")
+        log_event("Ending yearComparisonTrend in trend.R")
     }
     p
 }
 
-comparisionTrend <- function(debug, df, label){
+cycleComparisonTrend <- function(debug, df, label){
     if(debug){
-        log_event("Starting comparisionTrend in trend.R")
+        log_event("Starting cycleComparisonTrend in trend.R")
     }
     p <- df %>%
         plot_ly(
@@ -93,56 +95,9 @@ comparisionTrend <- function(debug, df, label){
             rangemode = "tozero")
         )
     if(debug){
-        log_event("Ending comparisionTrend in trend.R")
+        log_event("Ending cycleComparisonTrend in trend.R")
     }
     p
 }
 
 
-predictionTrend <- function(debug, kpi, start, end, server){
-    if(debug){
-        log_event("Starting predictionTrend in trend.R")
-    }
-    trainSQL <- kpiTrainData( kpi, start, end)
-    cs <- connectionString(Server = paste("aworks300", server, sep = "\\"), Database = "LH_Indicators")
-    train <- getKPIs(cs, trainSQL)
-
-    testSQL <- kpiTestData(kpi, start, end)
-    cs <- connectionString(Server = paste("aworks300", server, sep = "\\"), Database = "LH_Indicators")
-    test <- getKPIs(cs, testSQL)
-
-    prediction <- xgboostPrediction(train, test)
-    err <- prediction$err
-    pred <- round(prediction$pred)
-    test$prediction <- pred
-
-    p <- test %>%
-    plot_ly(
-        x = ~Date,
-        y = ~ind_value_1,
-        type = "scatter",
-        mode = 'lines',
-        fill = 'tozeroy',
-        name = "Current Values"
-    ) %>%
-    add_trace(
-        y = ~prediction,
-        name = 'Predicted Values',
-        mode = 'lines',
-        fill = 'tozeroy'
-    ) %>%          
-    layout(
-        title = "<b>Predicted Data</b><br>test phase",
-        xaxis = list(
-            type = 'date'
-        ),
-        yaxis = list(
-            title = "Volumes",
-            rangemode = "tozero"
-        )
-    )
-    if(debug){
-        log_event("Ending predictionTrend in trend.R")
-    }
-    p
-}
