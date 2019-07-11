@@ -5,6 +5,11 @@
     * UI is a function containing the UI elements (which can also be functions)
     * server is also a function with the parameters 'input', 'output', and 'session'
 
+ - https://shiny.rstudio.com/tutorial/written-tutorial/lesson1/
+ - https://deanattali.com/blog/advanced-shiny-tips/
+ - https://shiny.rstudio.com/gallery/
+ - https://www.rstudio.com/products/shiny/shiny-user-showcase/
+
 ## UI
 
  - Each Shiny UI elements are composed of multiple html elements
@@ -74,6 +79,7 @@
     * You use print statements through the code to get around this or the log_event function
     * the package shinyEventLogger allows the exact flow through a shiny app to be determined.
     * Often elements depend on one another, when this is the case the function req(dependencies here) can be used. This will prevent the observe, reactive, and render functions from executing until all the dependencies (usually non-null variables) are met
+    * https://shiny.rstudio.com/articles/modules.html
 
 ## Package specific details
 
@@ -95,6 +101,7 @@
  - plotly
     * Interactive plotting library, default plots allow for re-scaling, zooming, grids, and save as options
     * plot objects are created with the chart type and then features are added using the %>% syntax. This allows for layout features to be defined, legends, and other series to be uniquely defined and added to the plot
+    * https://images.plot.ly/plotly-documentation/images/r_cheat_sheet.pdf?_ga=2.140701114.924533627.1553808780-1820369251.1553808780
 
  - DT
     * The basic shiny package contains a datatable, however this package adds a lot to the interactivity of the table.
@@ -107,6 +114,7 @@
  - sparkline
     * Create micro charts within table cells that show values on scroll over.
     * These are added to the DT (datatable) using JS callback functions. This pattern can be used to update most shiny components with javascript and htmlwidgets
+    * https://www.infoworld.com/article/3318222/how-to-add-sparklines-to-r-tables.html
 
  - tibbleTime
     * Used for statistical anomaly detections to separate a data series by different time intervals
@@ -115,6 +123,7 @@
  - anomalize
     * used in conjunction with tibbletime to detect anomalies within a series.
     * Statistics are calculated within a time frame and then a GESD algorithm is used to determine outliers
+    * https://blog.statsbot.co/time-series-anomaly-detection-algorithms-1cef5519aef2
 
  - xgboost
     * Predictive modeling packages which used accelerated gradient descent to speed up algorithm training
