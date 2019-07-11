@@ -3,7 +3,7 @@ require(shinydashboard)
 require(dplyr)
 
 getHeader <- function(){
-    header <- dashboardHeader( 
+    header <- dashboardHeader(
         title = "Database Anomalies",
         getDropDownMessage(),
         getDropDownNotification(),
@@ -17,12 +17,7 @@ getDropDownMessage <- function(){
     dropDownMessages <- dropdownMenu(type = "messages",
         messageItem(
             from = "Zachary",
-            message = "This is my QA system."
-        ),
-        messageItem(
-            from = "Zachary",
-            message = "Improvement suggestions welcome.",
-            time = "00:00"
+            message = "Please review the README.md file."
         )
     )
     dropDownMessages
@@ -32,12 +27,12 @@ getDropDownNotification <- function(){
 
     dropDownNotifications <- dropdownMenu(type = "notifications",
         notificationItem(
-            text = "Currently in Beta.",
+            text = "Version 1.0.0",
             icon("users"),
             status = "success"
         ),
         notificationItem(
-            text = "Please contact on error.",
+            text = "Please contact NW on error.",
             icon("truck")
         )
     )
@@ -47,10 +42,10 @@ getDropDownNotification <- function(){
 getDropDownTasks <- function(){
     dropDownTasks <- dropdownMenu(type = "tasks", badgeStatus = "success",
         taskItem(value = 17, color = "aqua",
-            "QA Project"
+            "Progress Placeholder"
         ),
         taskItem(value = 90, color = "green",
-            "QA Progress placeholder"
+            "Progress Placeholder"
         )
     )
     dropDownTasks
